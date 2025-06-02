@@ -108,3 +108,32 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
         )
+    
+    def active_learning_setup(self, stage: str):
+        """
+        Setup method for active learning. This method is called to prepare the data module for active learning.
+        It should be implemented by subclasses to set up the training, validation, and test datasets.
+        
+        Args:
+            stage (str): The stage of the data module (e.g., 'fit', 'validate', 'test').
+        """
+        raise NotImplementedError("Must be implemented by subclass.")
+    
+    def active_learning_add_label_data(self, labeled_data: Dataset):
+        """
+        Adds labeled data to the training dataset for active learning, and 
+        removes it from the unlabeled dataset.
+        Args:
+            labeled_data (Dataset): The dataset containing labeled data to be added.
+        """
+        
+        
+    def unlabeled_dataloader(self) -> DataLoader:
+        """
+        Returns a DataLoader for the unlabeled dataset.
+        This method should be implemented by subclasses to provide the unlabeled dataset.
+        
+        Returns:
+            DataLoader: A DataLoader for the unlabeled dataset.
+        """
+        raise NotImplementedError("Must be implemented by subclass.")
