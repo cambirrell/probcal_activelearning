@@ -106,3 +106,7 @@ results.save("path/to/results.npz")
 ```
 
 Invoking the `CalibrationEvaluator`'s `__call__` method (as above) kicks off an extensive evaluation wherein calibration metrics are computed for the specified model. This passes back a `CalibrationResults` object, which will contain the computed metrics and other helpful variables for further analysis.
+
+
+## Active Learning
+Instructions for active learning are still in development. Please check back later.
