@@ -119,7 +119,7 @@ def main(config: ActiveLearningConfig) -> None:
     unlabeled_data = datamodule.unlabeled_dataloader()
     while budget > 0:
         # Train the model on the sampled data
-        model, val_metric = train_samples(training_data, config.num_classes, model))
+        model, val_metric = train_samples(training_data, config.num_classes, model)
         eval_results.append(val_metric)
         # Select samples from the unlabeled data based on the uncertainty metric
         selected_samples = select_samples(unlabeled_data, config.num_samples, config.metric)
