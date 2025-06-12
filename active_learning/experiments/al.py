@@ -4,9 +4,13 @@ import os.path
 from datetime import datetime
 from typing import Any
 
+import math
 import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
+
+import lightning as L
+from lightning.pytorch.loggers import CSVLogger
 
 from probcal.enums import DatasetType
 from probcal.enums import ImageDatasetName
@@ -15,29 +19,39 @@ from probcal.utils.configs import EvaluationConfig
 from probcal.utils.experiment_utils import from_yaml
 from probcal.utils.experiment_utils import get_datamodule
 from probcal.utils.experiment_utils import get_model
+from probcal.utils.experiment_utils import fix_random_seed
+from probcal.utils.experiment_utils import get_chkp_callbacks
 from probcal.evaluation.eval_model import active_learning_evaluation
 
-def sample_data(num_samples: int, num_classes: int):
-    """
-    Sample data from the dataset.
-    """
-    pass
 
-def train_samples(num_samples: int, num_classes: int):
+def train_samples(model: Any, config, training_data: Any, validation_data: Any, num_classes: int):
     """
     Train the model on the sampled data.
     """
-    pass
-
-def eval_model(validation_data: Any):
-    """
-    Evaluate the model on the validation data.
-    """
-    pass
+    fix_random_seed(config.random_seed)
+    logger = CSVLogger(save_dir=config.log_dir, name=config.experiment_name)
+    chkp_dir = config.chkp_dir / config.experiment_name / f"version_{i}"
+    chkp_callbacks = get_chkp_callbacks(chkp_dir, config.chkp_freq)
+    trainer = L.Trainer(
+            accelerator=config.accelerator_type.value,
+            min_epochs=config.num_epochs,
+            max_epochs=config.num_epochs,
+            log_every_n_steps=5,
+            check_val_every_n_epoch=math.ceil(config.num_epochs / 200),
+            enable_model_summary=False,
+            callbacks=chkp_callbacks,
+            logger=logger,
+            precision=config.precision,
+        )
+    trainer.fit(model=model, datamodule=training_data)
+    val_metrics = trainer.validate(model=model, dataloaders=validation_data)
+    return model, val_metrics
+    
 
 def select_samples(unlabeled_data: Any, num_samples: int, metric: str):
     """
     Select samples from the unlabeled data based on the uncertainty metric.
+    Must return unbatched data in form of a list[tuple[torch.Tensor, torch.Tensor]].
     """
     pass
 
@@ -83,6 +97,16 @@ def main(config: ActiveLearningConfig) -> None:
         config.dataset_path_or_spec,
         config.batch_size,
     )
+    datamodule.setup()
+    # TODO: See if this generated if logic is needed
+    if config.dataset_type == DatasetType.IMAGE and config.image_dataset_name is not None:
+        datamodule.set_image_dataset(config.image_dataset_name)
+    elif config.dataset_type == DatasetType.TABULAR and config.input_dim == 1:
+        datamodule.set_tabular_dataset(config.input_dim)
+    else:
+        raise ValueError("Unsupported dataset type or configuration.")
+    datamodule.unlabeled_partion_setup(config.partition_size)
+
     model.to(device)
 
     budget = config.budget
@@ -90,22 +114,18 @@ def main(config: ActiveLearningConfig) -> None:
     # make initial sample, and get a validation set
     # Each of these should be a datamodule type
     #the splits are also predetermined and split, so we just need to mask part of the training data and split it into unlabeled 
-    training_data, validation_data, unlabeled_data = sample_data(config.validation_size, config.num_classes)
+    training_data = datamodule.train_dataloader()
+    validation_data = datamodule.val_dataloader()
+    unlabeled_data = datamodule.unlabeled_dataloader()
     while budget > 0:
         # Train the model on the sampled data
-        train_samples(training_data, config.num_classes)
-
-        # Evaluate the model on the validation data
-        eval_results.append(eval_model(validation_data))
-
+        model, val_metric = train_samples(training_data, config.num_classes, model))
+        eval_results.append(val_metric)
         # Select samples from the unlabeled data based on the uncertainty metric
         selected_samples = select_samples(unlabeled_data, config.num_samples, config.metric)
 
         #update the training data with the selected samples
-        training_data = torch.cat((training_data, selected_samples), dim=0)        
-
-        # Remove the selected samples from the unlabeled data
-        unlabeled_data = unlabeled_data[~unlabeled_data.isin(selected_samples)]
+        training_data, unlabeled_data = datamodule.active_learning_add_labeled_data(data_to_label=selected_samples)     
 
         budget -= config.num_samples
 
@@ -116,12 +136,11 @@ def main(config: ActiveLearningConfig) -> None:
             config.model_name,
             config.model_path,
         )
-    train_samples(training_data, config.num_classes)
-    eval_results.append(eval_model(validation_data))
+    model, val_metric = train_samples(training_data, config.num_classes)
+    eval_results.append(val_metric)
     plot_results(validation_data)
 
     
-
 if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--config", type=str)

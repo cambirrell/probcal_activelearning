@@ -152,6 +152,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             if not any(torch.equal(self.unlabeled[i][0], item[0]) and self.unlabeled[i][1] == item[1] for item in data_to_label):
                 keep_indices.append(i)
         self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
+        return self.train_dataloader(), self.unlabeled_dataloader()
 
 
 
