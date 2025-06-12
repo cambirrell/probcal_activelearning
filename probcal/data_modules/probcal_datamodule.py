@@ -4,7 +4,7 @@ from typing import Literal
 import lightning as L
 import torch
 from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, random_split
 
 from probcal.data_modules.bootstrap_mixin import BootstrapMixin
 
@@ -13,13 +13,14 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
     train: Dataset | None = None
     val: Dataset | None = None
     test: Dataset | None = None
+    unlabeled: Dataset | None = None
 
     def __init__(
         self,
         root_dir: str | Path,
         batch_size: int,
         num_workers: int,
-        persistent_workers: bool,
+        persistent_workers: bool
     ):
         super().__init__()
         self.root_dir = Path(root_dir)
@@ -109,25 +110,51 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             persistent_workers=self.persistent_workers,
         )
     
-    def active_learning_setup(self, stage: str):
+    def unlabeled_partion_setup(self, partition_size: float):
         """
-        Setup method for active learning. This method is called to prepare the data module for active learning.
-        It should be implemented by subclasses to set up the training, validation, and test datasets.
-        
-        Args:
-            stage (str): The stage of the data module (e.g., 'fit', 'validate', 'test').
+        Sets up the unlabeled dataset by partitioning the training data.
         """
-        raise NotImplementedError("Must be implemented by subclass.")
+        if self.train is None:
+            raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
+        if not (0 < partition_size < 1):
+            raise ValueError("Partition size must be between 0 and 1.")
+        # This should split the amount of training data into a partition for unlabeled data
+        n = len(self.train)
+        partition_size = int(n * partition_size)
+        generator = torch.Generator().manual_seed(42)  # For reproducibility
+        self.unlabeled, self.train = random_split(self.train, [partition_size, n - partition_size], generator=generator)
+        self.al_setup = True
     
-    def active_learning_add_label_data(self, labeled_data: Dataset):
+    def active_learning_add_label_data(self, data_to_label: list[tuple[torch.Tensor, torch.Tensor]]):
         """
         Adds labeled data to the training dataset for active learning, and 
         removes it from the unlabeled dataset.
         Args:
-            labeled_data (Dataset): The dataset containing labeled data to be added.
-        """
+            data_to_label (list[tuple[torch.Tensor, torch.Tensor]]): A list of tuples where each tuple contains a data point and its corresponding label. Assume this data is unbatched"""
+        if self.unlabeled is None:
+            raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
         
+        # Assuming data_to_label is a list of tensors
+        labeled_data = torch.utils.data.TensorDataset(
+            torch.stack([item[0] for item in data_to_label]),
+            torch.stack([item[1] for item in data_to_label])
+        )
+        if self.train is None:
+            raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
+        if not self.al_setup:
+            raise ValueError("Active learning setup has not been done. Did you call `unlabeled_partion_setup` yet?")
+        self.train = torch.utils.data.ConcatDataset([self.train, labeled_data])
         
+        # Remove the labeled data from the unlabeled dataset
+        # TODO: Implement logic to remove the labeled data from the unlabeled dataset
+        keep_indices = []
+        for i in range(len(self.unlabeled)):
+            if not any(torch.equal(self.unlabeled[i][0], item[0]) and self.unlabeled[i][1] == item[1] for item in data_to_label):
+                keep_indices.append(i)
+        self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
+
+
+
     def unlabeled_dataloader(self) -> DataLoader:
         """
         Returns a DataLoader for the unlabeled dataset.
@@ -136,4 +163,12 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         Returns:
             DataLoader: A DataLoader for the unlabeled dataset.
         """
-        raise NotImplementedError("Must be implemented by subclass.")
+        if self.unlabeled is None:
+            raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
+        return DataLoader(
+            self.unlabeled,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
+        )
