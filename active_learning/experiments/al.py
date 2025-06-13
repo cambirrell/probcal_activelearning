@@ -15,13 +15,12 @@ from lightning.pytorch.loggers import CSVLogger
 from probcal.enums import DatasetType
 from probcal.enums import ImageDatasetName
 from probcal.models.probabilistic_regression_nn import ProbabilisticRegressionNN
-from probcal.utils.configs import EvaluationConfig
+from probcal.utils.configs import ActiveLearningConfig
 from probcal.utils.experiment_utils import from_yaml
 from probcal.utils.experiment_utils import get_datamodule
 from probcal.utils.experiment_utils import get_model
 from probcal.utils.experiment_utils import fix_random_seed
 from probcal.utils.experiment_utils import get_chkp_callbacks
-from probcal.evaluation.eval_model import active_learning_evaluation
 
 
 def train_samples(model: Any, config, training_data: Any, validation_data: Any, num_classes: int):
@@ -48,20 +47,19 @@ def train_samples(model: Any, config, training_data: Any, validation_data: Any, 
     return model, val_metrics
     
 
-def select_samples(unlabeled_data: Any, num_samples: int, metric: str):
+def select_samples(unlabeled_data: Any, training_data: Any, model: Any, num_samples: int, metric: str):
     """
     Select samples from the unlabeled data based on the uncertainty metric.
     Must return unbatched data in form of a list[tuple[torch.Tensor, torch.Tensor]].
+    unlabeled_data is a data loader right now, model is in lightening format,
+    metric is string, and num_samples is the amount of data points to num_samples/batch_size is the target
     """
-    pass
+    
+    #TODO: I need to make adjusts so I have x_unlabeled paried with y hat and compare that to 
+    # Training data and set up a few different types of 
 
-def uncertainty_estimation(model: Any, unlabeled_data: Any, num_samples: int, metric: str):
-    """
-    Estimate the uncertainty of the model on the data.
-    """
-    # will use the evalution/eval_model.py file to get the uncertainty metric
-    # we will need to then pull the right metric from the model
-    pass
+
+    
 
 def plot_results(results: Any):
     """
@@ -138,7 +136,8 @@ def main(config: ActiveLearningConfig) -> None:
         )
     model, val_metric = train_samples(training_data, config.num_classes)
     eval_results.append(val_metric)
-    plot_results(validation_data)
+    if config.plot_results:
+        plot_results(validation_data)
 
     
 if __name__ == "__main__":

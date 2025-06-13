@@ -18,16 +18,6 @@ from probcal.utils.experiment_utils import get_datamodule
 from probcal.utils.experiment_utils import get_model
 
 
-def active_learning_evaluation(
-    model,
-    datamodule,
-    config: EvaluationConfig,
-):
-    """
-    Evaluate the model on the active learning dataset.
-    This function is a placeholder for the actual evaluation logic.
-    """
-    pass
 
 def main(config_path: Path):
 

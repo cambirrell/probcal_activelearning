@@ -349,3 +349,12 @@ class EvaluationConfig(BaseConfig):
             ece_weights=ece_weights,
             ece_alpha=ece_alpha,
         )
+    
+
+
+class ActiveLearningConfig(BaseConfig):
+    def __init__(self, experiment_name, head_type, dataset_type, dataset_path_or_spec, source_dict, input_dim, hidden_dim, batch_size, num_workers, accelerator_type, log_dir):
+        super().__init__(experiment_name, head_type, dataset_type, dataset_path_or_spec, source_dict, input_dim, hidden_dim, batch_size, num_workers, accelerator_type, log_dir)
+    #TODO: Fill this out
+
+    
