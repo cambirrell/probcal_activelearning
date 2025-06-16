@@ -265,6 +265,26 @@ class CalibrationEvaluator:
             return return_obj[0]
         else:
             return tuple(return_obj)
+        
+
+    def compute__cce_active_learning(
+            self,
+            model: ProbabilisticRegressionNN,
+            grid_loader: DataLoader,
+            sample_loader: DataLoader,
+            unlabeled_sample_loader: DataLoader,
+        ) -> tuple[torch.Tensor, torch.Tensor]:
+            """Compute the CCE between the given model and data samples.
+
+            Args:
+                model (ProbabilisticRegressionNN): Probabilistic regression model to compute the CCE for.
+                grid_loader (DataLoader): DataLoader with the data inputs to compute CCE over.
+                sample_loader (DataLoader): DataLoader with the data inputs/outputs that define S for x and y.
+                unlabeled_sample_loader (DataLoader): DataLoader that we will put x through model to form x prime and y prime samples.
+            Returns:
+                tuple[torch.Tensor, torch.Tensor] 
+            """
+            pass
 
     def compute_ece(self, model: ProbabilisticRegressionNN, data_loader: DataLoader) -> float:
         """Compute the regression ECE of the given model over the dataset spanned by the data loader.

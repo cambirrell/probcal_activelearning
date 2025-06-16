@@ -21,6 +21,7 @@ from probcal.utils.experiment_utils import get_datamodule
 from probcal.utils.experiment_utils import get_model
 from probcal.utils.experiment_utils import fix_random_seed
 from probcal.utils.experiment_utils import get_chkp_callbacks
+from probcal.evaluation.calibration_evaluator import CalibrationEvaluator
 
 
 def train_samples(model: Any, config, training_data: Any, validation_data: Any, num_classes: int):
@@ -54,10 +55,14 @@ def select_samples(unlabeled_data: Any, training_data: Any, model: Any, num_samp
     unlabeled_data is a data loader right now, model is in lightening format,
     metric is string, and num_samples is the amount of data points to num_samples/batch_size is the target
     """
-    
-    #TODO: I need to make adjusts so I have x_unlabeled paried with y hat and compare that to 
-    # Training data and set up a few different types of 
-
+    evaluator = CalibrationEvaluator()
+    assert metric in ["cce"]
+    if metric == "cce":
+        grid_loader = None
+        higheset_uncertainty_batch = evaluator.compute__cce_active_learning(model, grid_loader, training_data, unlabeled_data)
+    else:
+        raise NotImplementedError
+    return list(zip(*[t.unbind(0) for t in higheset_uncertainty_batch]))
 
     
 
