@@ -59,10 +59,17 @@ def select_samples(unlabeled_data: Any, training_data: Any, model: Any, num_samp
     assert metric in ["cce"]
     if metric == "cce":
         grid_loader = None
-        higheset_uncertainty_batch = evaluator.compute__cce_active_learning(model, grid_loader, training_data, unlabeled_data)
+        uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(model, grid_loader, training_data, unlabeled_data)
+        topk_indices = torch.topk(uncertainty_scores, k=num_samples).indices
+        highest_uncertainty_batches = [batch for i, batch in enumerate(unlabeled_data) if i in topk_indices.tolist()]
+        data_to_label = []
+        for x_batch, y_batch in highest_uncertainty_batches:
+            # Unbind along the batch dimension (0) and pair up
+            data_to_label.extend(list(zip(x_batch.unbind(0), y_batch.unbind(0))))
     else:
         raise NotImplementedError
-    return list(zip(*[t.unbind(0) for t in higheset_uncertainty_batch]))
+    
+    return data_to_label
 
     
 

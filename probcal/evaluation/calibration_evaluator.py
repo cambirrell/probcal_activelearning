@@ -270,21 +270,68 @@ class CalibrationEvaluator:
     def compute__cce_active_learning(
             self,
             model: ProbabilisticRegressionNN,
-            grid_loader: DataLoader,
             sample_loader: DataLoader,
             unlabeled_sample_loader: DataLoader,
         ) -> tuple[torch.Tensor, torch.Tensor]:
-            """Compute the CCE between the given model and data samples.
+            """Compute CCE-based uncertainty for each batch in the unlabeled set.
 
             Args:
                 model (ProbabilisticRegressionNN): Probabilistic regression model to compute the CCE for.
-                grid_loader (DataLoader): DataLoader with the data inputs to compute CCE over.
-                sample_loader (DataLoader): DataLoader with the data inputs/outputs that define S for x and y.
-                unlabeled_sample_loader (DataLoader): DataLoader that we will put x through model to form x prime and y prime samples.
+                sample_loader (DataLoader): DataLoader with the data inputs/outputs that define S for x and y (labeled reference).
+                unlabeled_sample_loader (DataLoader): DataLoader with unlabeled data to score.
+
             Returns:
-                tuple[torch.Tensor, torch.Tensor] 
+                tuple[torch.Tensor, torch.Tensor]:
+                    - uncertainty_scores: (num_batches,) tensor of CCE values per batch.
+                    - batch_indices: (num_batches,) tensor of batch indices.
             """
-            pass
+            # Get reference samples (labeled)
+            x_ref, y_ref, x_prime_ref, y_prime_ref = self._get_samples_for_mcmd(model, sample_loader)
+            x_kernel, y_kernel = self._get_kernel_functions(y_ref)
+
+            uncertainty_scores = []
+            batch_indices = []
+
+            for batch_idx, (inputs, _) in enumerate(tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")):
+                # Encode inputs
+                if self.settings.dataset_type == DatasetType.TABULAR:
+                    encoder = self._encode_tabular
+                elif self.settings.dataset_type == DatasetType.IMAGE:
+                    encoder = self._encode_image
+                else:
+                    encoder = self._encode_text
+
+                encoded_inputs = encoder(inputs.to(self.device))
+
+                # Predictive samples for this batch
+                y_hat = model.predict(inputs.to(self.device))
+                x_prime = torch.repeat_interleave(
+                    encoded_inputs,
+                    repeats=self.settings.cce_settings.num_mc_samples,
+                    dim=0,
+                )
+                y_prime = model.sample(
+                    y_hat,
+                    num_samples=self.settings.cce_settings.num_mc_samples,
+                ).flatten()
+
+                # Compute MCMD/CCE between reference and this batch
+                # Use the batch as the "grid" for CCE computation
+                cce_val = compute_mcmd_torch(
+                    grid=encoded_inputs,
+                    x=x_ref,
+                    y=y_ref,
+                    x_prime=x_prime,
+                    y_prime=y_prime,
+                    x_kernel=x_kernel,
+                    y_kernel=y_kernel,
+                    lmbda=self.settings.cce_settings.lmbda,
+                )
+                # Aggregate CCE for this batch (mean over grid points)
+                uncertainty_scores.append(cce_val.mean().item())
+                batch_indices.append(batch_idx)
+
+            return torch.tensor(uncertainty_scores), torch.tensor(batch_indices)
 
     def compute_ece(self, model: ProbabilisticRegressionNN, data_loader: DataLoader) -> float:
         """Compute the regression ECE of the given model over the dataset spanned by the data loader.
