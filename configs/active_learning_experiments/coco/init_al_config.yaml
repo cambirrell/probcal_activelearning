@@ -1,0 +1,33 @@
+experiment_name: "my_active_learning_experiment"
+head_type: "gaussian"
+
+dataset:
+  type: "image"                # or "tabular"
+  path: "/path/to/dataset"     # for tabular datasets
+  spec: "COCO"                 # for image datasets, e.g., "COCO"
+  input_dim: 224
+  image_dataset_name: "COCO"   # only for image datasets
+
+hidden_dim: 128
+
+active_learning:
+  batch_size: 32
+  num_workers: 8
+  accelerator: "cuda"
+  log_dir: "./results"
+  budget: 1000                 # total number of samples to acquire
+  num_samples: 64              # number of samples to acquire per iteration
+  metric: "cce"                # uncertainty metric to use
+  partition_size: 100          # size of each partition for unlabeled pool
+  model_type: "probabilistic_regression_nn"
+  model_params:
+    lr: 0.001
+    weight_decay: 0.0001
+    # add other model-specific params here
+  model_name: "my_model"
+  model_path: "./weights/my_model.ckpt"
+  plot_results: true
+  random_seed: 42
+  num_classes: 10              # only if needed for your model
+
+# Optionally, you can add other sections for training/evaluation if needed
