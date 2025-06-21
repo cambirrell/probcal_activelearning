@@ -349,12 +349,60 @@ class EvaluationConfig(BaseConfig):
             ece_weights=ece_weights,
             ece_alpha=ece_alpha,
         )
-    
 
 
-class ActiveLearningConfig(BaseConfig):
-    def __init__(self, experiment_name, head_type, dataset_type, dataset_path_or_spec, source_dict, input_dim, hidden_dim, batch_size, num_workers, accelerator_type, log_dir):
-        super().__init__(experiment_name, head_type, dataset_type, dataset_path_or_spec, source_dict, input_dim, hidden_dim, batch_size, num_workers, accelerator_type, log_dir)
-    #TODO: Fill this out
+class ActiveLearningConfig(TrainingConfig):
+    def __init__(
+        self,
+        experiment_name: str,
+        accelerator_type: AcceleratorType,
+        head_type: HeadType,
+        chkp_dir: Path,
+        chkp_freq: int,
+        batch_size: int,
+        num_workers: int,
+        num_epochs: int,
+        optim_type: OptimizerType,
+        optim_kwargs: dict,
+        lr_scheduler_type: LRSchedulerType | None,
+        lr_scheduler_kwargs: dict | None,
+        beta_scheduler_type: BetaSchedulerType | None,
+        beta_scheduler_kwargs: dict | None,
+        dataset_type: DatasetType,
+        dataset_path_or_spec: Path | ImageDatasetName,
+        num_trials: int,
+        log_dir: Path,
+        source_dict: dict,
+        input_dim: int = 1,
+        hidden_dim: int = 64,
+        precision: str | None = None,
+        random_seed: int | None = None,
 
-    
+    ):
+        super(ActiveLearningConfig, self).__init__(
+            experiment_name=experiment_name,
+            accelerator_type=accelerator_type,
+            head_type=head_type,
+            chkp_dir=chkp_dir,
+            chkp_freq=chkp_freq,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            num_epochs=num_epochs,
+            optim_type=optim_type,
+            optim_kwargs=optim_kwargs,
+            lr_scheduler_type=lr_scheduler_type,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+            beta_scheduler_type=beta_scheduler_type,
+            beta_scheduler_kwargs=beta_scheduler_kwargs
+            dataset_type=dataset_type,
+            dataset_path_or_spec=dataset_path_or_spec,
+            num_trials=num_trials,
+            log_dir=log_dir,
+            source_dict=source_dict,
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            precision=precision,
+            random_seed=random_seed
+        )
+
+    # TODO: Fill this out
