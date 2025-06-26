@@ -373,10 +373,14 @@ class ActiveLearningConfig(TrainingConfig):
         num_trials: int,
         log_dir: Path,
         source_dict: dict,
+        sample_per_iteration: int, # Number of batches added per iteration
+        initial_labeled_partiton: int, #batches in initial
+        plot_results: bool = False,
         input_dim: int = 1,
         hidden_dim: int = 64,
         precision: str | None = None,
         random_seed: int | None = None,
+
 
     ):
         super(ActiveLearningConfig, self).__init__(
@@ -393,7 +397,7 @@ class ActiveLearningConfig(TrainingConfig):
             lr_scheduler_type=lr_scheduler_type,
             lr_scheduler_kwargs=lr_scheduler_kwargs,
             beta_scheduler_type=beta_scheduler_type,
-            beta_scheduler_kwargs=beta_scheduler_kwargs
+            beta_scheduler_kwargs=beta_scheduler_kwargs,
             dataset_type=dataset_type,
             dataset_path_or_spec=dataset_path_or_spec,
             num_trials=num_trials,
@@ -405,4 +409,93 @@ class ActiveLearningConfig(TrainingConfig):
             random_seed=random_seed
         )
 
-    # TODO: Fill this out
+        self.sample_per_iteration = sample_per_iteration
+        self.initial_labeled_partition = initial_labeled_partiton
+        self.plot_results = plot_results
+
+
+    @staticmethod
+    def from_yaml(config_path: str | Path) -> ActiveLearningConfig:
+        """Factory method to construct an TrainingConfig from a .yaml file.
+
+        Args:
+            config_path (str | Path): Path to the .yaml file with config options.
+
+        Returns:
+            TrainingConfig: The specified config.
+        """
+        config_dict = get_yaml(config_path)
+        training_dict: dict = config_dict["training"]
+        eval_dict: dict = config_dict["evaluation"]
+        active_learning_dict: dict = config_dict.get("active_learning", {})
+
+        experiment_name = to_snake_case(config_dict["experiment_name"])
+        accelerator_type = AcceleratorType(training_dict["accelerator"])
+        head_type = HeadType(config_dict["head_type"])
+        chkp_dir = Path(training_dict["chkp_dir"])
+        chkp_freq = training_dict["chkp_freq"]
+        batch_size = training_dict["batch_size"]
+        num_workers = training_dict.get("num_workers", 8)
+        num_epochs = training_dict["num_epochs"]
+        precision = training_dict.get("precision")
+        optim_type = OptimizerType(training_dict["optimizer"]["type"])
+        optim_kwargs = training_dict["optimizer"]["kwargs"]
+
+        if "lr_scheduler" in training_dict:
+            lr_scheduler_type = LRSchedulerType(training_dict["lr_scheduler"]["type"])
+            lr_scheduler_kwargs = training_dict["lr_scheduler"]["kwargs"]
+        else:
+            lr_scheduler_type = None
+            lr_scheduler_kwargs = None
+
+        if "beta_scheduler" in training_dict:
+            beta_scheduler_type = BetaSchedulerType(training_dict["beta_scheduler"]["type"])
+            beta_scheduler_kwargs = training_dict["beta_scheduler"]["kwargs"]
+            if beta_scheduler_kwargs.get("last_epoch", None) == -1:
+                beta_scheduler_kwargs["last_epoch"] = num_epochs
+        else:
+            beta_scheduler_type = None
+            beta_scheduler_kwargs = None
+
+        dataset_type = DatasetType(config_dict["dataset"]["type"])
+        dataset_path_or_spec = TrainingConfig.get_dataset_path_or_spec(config_dict["dataset"])
+
+        num_trials = eval_dict["num_trials"]
+        log_dir = Path(eval_dict["log_dir"])
+        input_dim = config_dict["dataset"].get("input_dim", 1)
+        hidden_dim = config_dict.get("hidden_dim", 64)
+        random_seed = config_dict.get("random_seed")
+
+        sample_per_iteration = active_learning_dict["sample_per_iteration"]
+        initial_labeled_partition = active_learning_dict["initial_labeled_partition"]
+        plot_results = active_learning_dict.get("plot_results", False)
+
+        return ActiveLearningConfig(
+            experiment_name=experiment_name,
+            accelerator_type=accelerator_type,
+            head_type=head_type,
+            chkp_dir=chkp_dir,
+            chkp_freq=chkp_freq,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            num_epochs=num_epochs,
+            optim_type=optim_type,
+            optim_kwargs=optim_kwargs,
+            lr_scheduler_type=lr_scheduler_type,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+            beta_scheduler_type=beta_scheduler_type,
+            beta_scheduler_kwargs=beta_scheduler_kwargs,
+            dataset_type=dataset_type,
+            dataset_path_or_spec=dataset_path_or_spec,
+            num_trials=num_trials,
+            log_dir=log_dir,
+            source_dict=config_dict,
+            sample_per_iteration=sample_per_iteration,
+            initial_labeled_partiton=initial_labeled_partition,
+            plot_results=plot_results,
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            precision=precision,
+            random_seed=random_seed,
+        )
+    
