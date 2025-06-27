@@ -1,33 +1,32 @@
-experiment_name: "my_active_learning_experiment"
-head_type: "gaussian"
-
+experiment_name: eva/stirn
+random_seed: 1998
+head_type: faithful_gaussian
 dataset:
-  type: "image"                # or "tabular"
-  path: "/path/to/dataset"     # for tabular datasets
-  spec: "COCO"                 # for image datasets, e.g., "COCO"
-  input_dim: 224
-  image_dataset_name: "COCO"   # only for image datasets
-
-hidden_dim: 128
-
-active_learning:
+  type: image
+  spec: eva
+training:
+  accelerator: gpu
   batch_size: 32
-  num_workers: 8
-  accelerator: "cuda"
-  log_dir: "./results"
-  budget: 1000                 # total number of samples to acquire
-  num_samples: 64              # number of samples to acquire per iteration
-  metric: "cce"                # uncertainty metric to use
-  partition_size: 100          # size of each partition for unlabeled pool
-  model_type: "probabilistic_regression_nn"
-  model_params:
-    lr: 0.001
-    weight_decay: 0.0001
-    # add other model-specific params here
-  model_name: "my_model"
-  model_path: "./weights/my_model.ckpt"
-  plot_results: true
-  random_seed: 42
-  num_classes: 10              # only if needed for your model
-
-# Optionally, you can add other sections for training/evaluation if needed
+  chkp_dir: chkp
+  chkp_freq: 200
+  num_epochs: 200
+  precision: bf16-mixed
+  optimizer:
+    type: adam_w
+    kwargs:
+      lr: 0.0001
+      weight_decay: 0.000001
+  lr_scheduler:
+    type: cosine_annealing
+    kwargs:
+      T_max: 200
+      eta_min: 0
+      last_epoch: -1
+evaluation:
+  num_trials: 1
+  log_dir: logs
+active_learning:
+  samples_per_iteration: 5
+  initial_labeled_partition: 10
+  plot_results: false
+  uncertainty_metric: cce

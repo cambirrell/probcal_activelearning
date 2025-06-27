@@ -375,6 +375,7 @@ class ActiveLearningConfig(TrainingConfig):
         source_dict: dict,
         sample_per_iteration: int, # Number of batches added per iteration
         initial_labeled_partiton: int, #batches in initial
+        uncertainty_metric: str, # Lets get this to its own object instead of a str, but I want results
         plot_results: bool = False,
         input_dim: int = 1,
         hidden_dim: int = 64,
@@ -412,6 +413,7 @@ class ActiveLearningConfig(TrainingConfig):
         self.sample_per_iteration = sample_per_iteration
         self.initial_labeled_partition = initial_labeled_partiton
         self.plot_results = plot_results
+        self.uncertainty_metric = uncertainty_metric
 
 
     @staticmethod
@@ -427,7 +429,7 @@ class ActiveLearningConfig(TrainingConfig):
         config_dict = get_yaml(config_path)
         training_dict: dict = config_dict["training"]
         eval_dict: dict = config_dict["evaluation"]
-        active_learning_dict: dict = config_dict.get("active_learning", {})
+        active_learning_dict: dict = config_dict["active_learning"]
 
         experiment_name = to_snake_case(config_dict["experiment_name"])
         accelerator_type = AcceleratorType(training_dict["accelerator"])
@@ -468,6 +470,7 @@ class ActiveLearningConfig(TrainingConfig):
 
         sample_per_iteration = active_learning_dict["sample_per_iteration"]
         initial_labeled_partition = active_learning_dict["initial_labeled_partition"]
+        uncertainty_metric = active_learning_dict["uncertainty_metric"]
         plot_results = active_learning_dict.get("plot_results", False)
 
         return ActiveLearningConfig(

@@ -42,13 +42,14 @@ from probcal.models.backbones import ViT
 from probcal.models.probabilistic_regression_nn import ProbabilisticRegressionNN
 from probcal.utils.configs import EvaluationConfig
 from probcal.utils.configs import TrainingConfig
+from probcal.utils.configs import ActiveLearningConfig
 from probcal.utils.generic_utils import partialclass
 
 GLOBAL_DATA_DIR = "data"
 
 
 def get_model(
-    config: TrainingConfig | EvaluationConfig, return_initializer: bool = False
+    config: TrainingConfig | EvaluationConfig | ActiveLearningConfig, return_initializer: bool = False
 ) -> ProbabilisticRegressionNN:
 
     initializer: Type[ProbabilisticRegressionNN]
