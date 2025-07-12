@@ -110,17 +110,16 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             persistent_workers=self.persistent_workers,
         )
     
-    def unlabeled_partion_setup(self, partition_size: float):
+    def unlabeled_partion_setup(self, partition_size: int):
         """
         Sets up the unlabeled dataset by partitioning the training data.
         """
         if self.train is None:
             raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
-        if not (0 < partition_size < 1):
+        if not (0 < partition_size < len(self.train)):
             raise ValueError("Partition size must be between 0 and 1.")
         # This should split the amount of training data into a partition for unlabeled data
         n = len(self.train)
-        partition_size = int(n * partition_size)
         generator = torch.Generator().manual_seed(42)  # For reproducibility
         self.unlabeled, self.train = random_split(self.train, [partition_size, n - partition_size], generator=generator)
         self.al_setup = True

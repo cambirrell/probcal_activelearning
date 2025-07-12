@@ -468,7 +468,7 @@ class ActiveLearningConfig(TrainingConfig):
         hidden_dim = config_dict.get("hidden_dim", 64)
         random_seed = config_dict.get("random_seed")
 
-        sample_per_iteration = active_learning_dict["sample_per_iteration"]
+        sample_per_iteration = active_learning_dict["samples_per_iteration"]
         initial_labeled_partition = active_learning_dict["initial_labeled_partition"]
         uncertainty_metric = active_learning_dict["uncertainty_metric"]
         plot_results = active_learning_dict.get("plot_results", False)
@@ -495,6 +495,7 @@ class ActiveLearningConfig(TrainingConfig):
             source_dict=config_dict,
             sample_per_iteration=sample_per_iteration,
             initial_labeled_partiton=initial_labeled_partition,
+            uncertainty_metric=uncertainty_metric,
             plot_results=plot_results,
             input_dim=input_dim,
             hidden_dim=hidden_dim,

@@ -1,6 +1,8 @@
 import argparse
 import logging
 import os.path
+from functools import partial
+from pathlib import Path
 from datetime import datetime
 from typing import Any
 
@@ -27,13 +29,15 @@ from probcal.evaluation.calibration_evaluator import CalibrationEvaluator
 from torch.utils.data import DataLoader
 
 
-def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig, datamodule: ProbcalDataModule):
+def train_samples(
+    model: ProbabilisticRegressionNN, config: ActiveLearningConfig, datamodule: ProbcalDataModule
+):
     """
     Train the model on the sampled data.
     """
     fix_random_seed(config.random_seed)
     logger = CSVLogger(save_dir=config.log_dir, name=config.experiment_name)
-    chkp_dir = config.chkp_dir / config.experiment_name 
+    chkp_dir = config.chkp_dir / config.experiment_name / f"version_{i}"
     chkp_callbacks = get_chkp_callbacks(chkp_dir, config.chkp_freq)
     trainer = L.Trainer(
         accelerator=config.accelerator_type.value,
@@ -46,15 +50,17 @@ def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig,
         logger=logger,
         precision=config.precision,
     )
-    print("Point A1")
     trainer.fit(model=model, datamodule=datamodule)
-    print("Point A2")
     val_metrics = trainer.validate(model=model, datamodule=datamodule)
     return model, val_metrics
 
 
 def select_samples(
-    unlabeled_data: DataLoader, training_data: DataLoader, model: ProbabilisticRegressionNN, num_samples: int, metric: str
+    unlabeled_data: DataLoader,
+    training_data: DataLoader,
+    model: ProbabilisticRegressionNN,
+    num_samples: int,
+    metric: str,
 ):
     """
     Select samples from the unlabeled data based on the uncertainty metric.
@@ -66,24 +72,20 @@ def select_samples(
     # temporary assert statement, the check should be loading the config
     assert metric in ["cce"]
     if metric == "cce":
-        print("Point C1")
+        grid_loader = None
         uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(
-            model, training_data, unlabeled_data
+            model, grid_loader, training_data, unlabeled_data
         )
-        print("Point C2")
         topk_indices = torch.topk(uncertainty_scores, k=num_samples).indices
-        print("Point C3")
         highest_uncertainty_batches = [
             batch for i, batch in enumerate(unlabeled_data) if i in topk_indices.tolist()
         ]
-        print("Point C4")
         data_to_label = []
         for x_batch, y_batch in highest_uncertainty_batches:
             # Unbind along the batch dimension (0) and pair up
             data_to_label.extend(list(zip(x_batch.unbind(0), y_batch.unbind(0))))
-        print("Point C5")
     else:
-        raise NotImplementedError # It is the plan to implement more uncertainty measures
+        raise NotImplementedError  # It is the plan to implement more uncertainty measures
 
     return data_to_label
 
@@ -103,7 +105,7 @@ def plot_results(results: Any, log_dir: str):
     plt.savefig(log_dir / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
 
 
-def log_results(log_dir:str, eval_results: list) -> None:
+def log_results(log_dir: str, eval_results: list) -> None:
     """
     Produces a YAML file with a heading for each training round.
     It includes eval metric, samples, and batches trained.
@@ -122,6 +124,7 @@ def log_results(log_dir:str, eval_results: list) -> None:
         yaml.dump(log_dict, f)
     print(f"Active learning log saved to {log_path}")
 
+
 def main(config: ActiveLearningConfig) -> None:
     """
     Main function to run the active learning experiment.
@@ -131,17 +134,15 @@ def main(config: ActiveLearningConfig) -> None:
 
     model = get_model(config)
     datamodule = get_datamodule(
-        config.dataset_type, 
-        config.dataset_path_or_spec, 
-        config.batch_size, 
-        config.num_workers
+        config.dataset_type, config.dataset_path_or_spec, config.batch_size, config.num_workers
     )
-    datamodule.setup("")
+    datamodule.setup()
     datamodule.unlabeled_partion_setup(config.initial_labeled_partition)
+
     model.to(device)
 
-    #To get the whole progress curve we will keep adding until we have trained on all the data
-    #budget = config.budget
+    # To get the whole progress curve we will keep adding until we have trained on all the data
+    # budget = config.budget
     eval_results = []
     num_labeled_batches = config.initial_labeled_partition
     training_data = datamodule.train_dataloader()
@@ -154,32 +155,37 @@ def main(config: ActiveLearningConfig) -> None:
         eval_results.append(
             {
                 "Batches_Labeled": num_labeled_batches,
-                "Samples_Labeled":num_labeled_batches * config.batch_size, 
-                "Eval":val_metric
+                "Samples_Labeled": num_labeled_batches * config.batch_size,
+                "Eval": val_metric,
             }
-            )
-        print("Point C")
+        )
         # Select samples from the unlabeled data based on the uncertainty metric
-        selected_samples = select_samples(unlabeled_data, training_data, model, config.sample_per_iteration, config.uncertainty_metric) 
-        print("Point D")
+        selected_samples = select_samples(
+            unlabeled_data,
+            training_data,
+            model,
+            config.sample_per_iteration,
+            config.uncertainty_metric,
+        )
+
         # update the training data with the selected samples
         training_data, unlabeled_data = datamodule.active_learning_add_labeled_data(
             data_to_label=selected_samples
         )
-        print("Point E")
+
         # reinitialize the model to train on the new data
         model = get_model(config)
 
     model, val_metric = train_samples(model, config, training_data, validation_data)
     eval_results.append(
-            {
-                "Batches_Labeled": num_labeled_batches,
-                "Samples_Labeled":num_labeled_batches * config.batch_size, 
-                "Eval":val_metric
-            }
-            )
+        {
+            "Batches_Labeled": num_labeled_batches,
+            "Samples_Labeled": num_labeled_batches * config.batch_size,
+            "Eval": val_metric,
+        }
+    )
     if config.plot_results:
-        plot_results(validation_data, config.log_dir)
+        plot_results(validation_data, config.log_diract)
     log_results(config.log_dir, eval_results)
 
 
@@ -187,7 +193,7 @@ if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--config", type=str)
     args = args.parse_args()
-    cfg = ActiveLearningConfig.from_yaml(args.config)
+    cfg = from_yaml(args.config)
     try:
         main(cfg)
     except Exception as e:

@@ -15,7 +15,6 @@ Saved model weights can be found [here](weights), and synthetic dataset files ca
 ```bash
 conda create --name probcal python=3.10
 conda activate probcal
-pip install -r requirements.txt
 ```
 
 ### Install Pre-Commit Hook
