@@ -46,9 +46,7 @@ def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig,
         logger=logger,
         precision=config.precision,
     )
-    print("Point A1")
     trainer.fit(model=model, datamodule=datamodule)
-    print("Point A2")
     val_metrics = trainer.validate(model=model, datamodule=datamodule)
     return model, val_metrics
 
@@ -69,20 +67,14 @@ def select_samples(
         uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(
             model, training_data, unlabeled_data
         )
-        print("Point C2")
-        print('k ', num_samples)
-        print('scores: ', uncertainty_scores.shape)
         topk_indices = torch.topk(uncertainty_scores, k=num_samples).indices
-        print("Point C3")
         highest_uncertainty_batches = [
             batch for i, batch in enumerate(unlabeled_data) if i in topk_indices.tolist()
         ]
-        print("Point C4")
         data_to_label = []
         for x_batch, y_batch in highest_uncertainty_batches:
             # Unbind along the batch dimension (0) and pair up
             data_to_label.extend(list(zip(x_batch.unbind(0), y_batch.unbind(0))))
-        print("Point C5")
     else:
         raise NotImplementedError # It is the plan to implement more uncertainty measures
 
@@ -157,13 +149,12 @@ def main(config: ActiveLearningConfig) -> None:
                 "Eval":val_metric
             }
             )
-        print("Point C")
         # Select samples from the unlabeled data based on the uncertainty metric
         training_data = datamodule.train_dataloader()
         selected_samples = select_samples(unlabeled_data, training_data, model, config.sample_per_iteration, config.uncertainty_metric) 
         print("Point D")
         # update the training data with the selected samples
-        training_data, unlabeled_data = datamodule.active_learning_add_labeled_data(
+        training_data, unlabeled_data = datamodule.active_learning_add_label_data(
             data_to_label=selected_samples
         )
         print("Point E")
