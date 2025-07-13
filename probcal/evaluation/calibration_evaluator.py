@@ -293,7 +293,7 @@ class CalibrationEvaluator:
             print("Point C1A")
             uncertainty_scores = []
             batch_indices = []
-
+            
             for batch_idx, (inputs, _) in enumerate(tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")):
                 # Encode inputs
                 if self.settings.dataset_type == DatasetType.TABULAR:
@@ -303,6 +303,7 @@ class CalibrationEvaluator:
                 else:
                     encoder = self._encode_text
                 print("Point C1B")
+                inputs = inputs.to(self.device)
                 encoded_inputs = encoder(inputs)
                 print("Point C1C")
                 # Predictive samples for this batch
