@@ -55,28 +55,27 @@ def select_samples(
     unlabeled_data: DataLoader, training_data: DataLoader, model: ProbabilisticRegressionNN, num_samples: int, metric: str
 ):
     """
-    Select samples from the unlabeled data based on the uncertainty metric.
-    Must return unbatched data in form of a list[tuple[torch.Tensor, torch.Tensor]].
-    unlabeled_data is a data loader right now, model is in lightening format,
-    metric is string, and num_samples is the amount of data points to num_samples/batch_size is the target
+    Select num_samples batches from the unlabeled data based on the uncertainty metric.
+    Returns a list of (x, y) tuples for all samples in the selected batches.
     """
     evaluator = CalibrationEvaluator()
-    # temporary assert statement, the check should be loading the config
     assert metric in ["cce"]
     if metric == "cce":
         uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(
             model, training_data, unlabeled_data
         )
-        topk_indices = torch.topk(uncertainty_scores, k=min(num_samples, uncertainty_scores.shape[0])).indices
-        highest_uncertainty_batches = [
-            batch for i, batch in enumerate(unlabeled_data) if i in topk_indices.tolist()
-        ]
+        # Collect all batches from the DataLoader into a list
+        all_batches = list(unlabeled_data)
+        # Select indices of the top-k batches
+        topk_indices = torch.topk(uncertainty_scores, k=min(num_samples, len(uncertainty_scores))).indices.tolist()
+        # Select the top batches
+        selected_batches = [all_batches[i] for i in topk_indices]
+        # Flatten to a list of (x, y) tuples
         data_to_label = []
-        for x_batch, y_batch in highest_uncertainty_batches:
-            # Unbind along the batch dimension (0) and pair up
-            data_to_label.extend(list(zip(x_batch.unbind(0), y_batch.unbind(0))))
+        for x_batch, y_batch in selected_batches:
+            data_to_label.extend(list(zip(x_batch, y_batch)))
     else:
-        raise NotImplementedError # It is the plan to implement more uncertainty measures
+        raise NotImplementedError
 
     return data_to_label
 
