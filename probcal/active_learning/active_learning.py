@@ -152,17 +152,14 @@ def main(config: ActiveLearningConfig) -> None:
         # Select samples from the unlabeled data based on the uncertainty metric
         training_data = datamodule.train_dataloader()
         selected_samples = select_samples(unlabeled_data, training_data, model, config.sample_per_iteration, config.uncertainty_metric) 
-        print("Point D")
         # update the training data with the selected samples
         training_data, unlabeled_data = datamodule.active_learning_add_label_data(
             data_to_label=selected_samples
         )
-        print("Point E")
         # reinitialize the model to train on the new data
         del model
         model = get_model(config)
         model.to(device)
-
 
     model, val_metric = train_samples(model, config, datamodule)
     eval_results.append(

@@ -6,7 +6,7 @@ dataset:
   spec: eva
 training:
   accelerator: gpu
-  batch_size: 16
+  batch_size: 32
   chkp_dir: chkp
   chkp_freq: 5
   num_epochs: 5
@@ -26,7 +26,7 @@ evaluation:
   num_trials: 1
   log_dir: logs
 active_learning:
-  samples_per_iteration: 5
-  initial_labeled_partition: 5
+  samples_per_iteration: 10
+  initial_labeled_partition: 10
   plot_results: false
   uncertainty_metric: cce
