@@ -266,7 +266,7 @@ class CalibrationEvaluator:
         else:
             return tuple(return_obj)
         
-
+    @torch.inference_mode()
     def compute__cce_active_learning(
             self,
             model: ProbabilisticRegressionNN,
