@@ -8,8 +8,8 @@ training:
   accelerator: gpu
   batch_size: 32
   chkp_dir: chkp
-  chkp_freq: 200
-  num_epochs: 200
+  chkp_freq: 20
+  num_epochs: 20
   precision: bf16-mixed
   optimizer:
     type: adam_w
