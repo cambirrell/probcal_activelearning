@@ -292,7 +292,7 @@ class CalibrationEvaluator:
             x_kernel, y_kernel = self._get_kernel_functions(y_ref)
             uncertainty_scores = []
             batch_indices = []
-            
+            print(f"Num batches: {len(unlabeled_sample_loader)}")
             for batch_idx, (inputs, _) in enumerate(tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")):
                 # Encode inputs
                 if self.settings.dataset_type == DatasetType.TABULAR:

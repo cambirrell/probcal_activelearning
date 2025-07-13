@@ -6,10 +6,10 @@ dataset:
   spec: eva
 training:
   accelerator: gpu
-  batch_size: 32
+  batch_size: 16
   chkp_dir: chkp
-  chkp_freq: 20
-  num_epochs: 20
+  chkp_freq: 5
+  num_epochs: 5
   precision: bf16-mixed
   optimizer:
     type: adam_w
@@ -27,6 +27,6 @@ evaluation:
   log_dir: logs
 active_learning:
   samples_per_iteration: 5
-  initial_labeled_partition: 10
+  initial_labeled_partition: 5
   plot_results: false
   uncertainty_metric: cce
