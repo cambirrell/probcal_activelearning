@@ -139,7 +139,13 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
 
         # Efficient removal using hashes
         def tensor_hash(x, y):
-            return (x.cpu().numpy().tobytes(), y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist()))
+            # Ensure y is a tensor
+            if not isinstance(y, torch.Tensor):
+                y = torch.as_tensor(y)
+            return (
+                x.cpu().numpy().tobytes(),
+                y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist())
+            )
         labeled_hashes = set(tensor_hash(x, y) for x, y in data_to_label)
         keep_indices = []
         for i in range(len(self.unlabeled)):
