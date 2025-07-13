@@ -138,7 +138,7 @@ def main(config: ActiveLearningConfig) -> None:
         config.num_workers
     )
     datamodule.setup("")
-    datamodule.unlabeled_partion_setup(config.initial_labeled_partition)
+    datamodule.unlabeled_partion_setup(config.initial_labeled_partition * config.batch_size)
     model.to(device)
 
     #To get the whole progress curve we will keep adding until we have trained on all the data

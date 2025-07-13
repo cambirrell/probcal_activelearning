@@ -121,7 +121,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         # This should split the amount of training data into a partition for unlabeled data
         n = len(self.train)
         generator = torch.Generator().manual_seed(42)  # For reproducibility
-        self.unlabeled, self.train = random_split(self.train, [partition_size, n - partition_size], generator=generator)
+        self.train, self.unlabeled = random_split(self.train, [partition_size, n - partition_size], generator=generator)
         self.al_setup = True
     
     def active_learning_add_label_data(self, data_to_label: list[tuple[torch.Tensor, torch.Tensor]]):
