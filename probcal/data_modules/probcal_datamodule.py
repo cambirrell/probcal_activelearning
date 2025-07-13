@@ -125,15 +125,8 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         self.al_setup = True
     
     def active_learning_add_label_data(self, data_to_label: list[tuple[torch.Tensor, torch.Tensor]]):
-        """
-        Adds labeled data to the training dataset for active learning, and 
-        removes it from the unlabeled dataset.
-        Args:
-            data_to_label (list[tuple[torch.Tensor, torch.Tensor]]): A list of tuples where each tuple contains a data point and its corresponding label. Assume this data is unbatched"""
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
-        
-        # Assuming data_to_label is a list of tensors
         labeled_data = torch.utils.data.TensorDataset(
             torch.stack([item[0] for item in data_to_label]),
             torch.stack([item[1] for item in data_to_label])
@@ -143,12 +136,15 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         if not self.al_setup:
             raise ValueError("Active learning setup has not been done. Did you call `unlabeled_partion_setup` yet?")
         self.train = torch.utils.data.ConcatDataset([self.train, labeled_data])
-        
-        # Remove the labeled data from the unlabeled dataset
-        # TODO: Implement logic to remove the labeled data from the unlabeled dataset
+
+        # Efficient removal using hashes
+        def tensor_hash(x, y):
+            return (x.cpu().numpy().tobytes(), y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist()))
+        labeled_hashes = set(tensor_hash(x, y) for x, y in data_to_label)
         keep_indices = []
         for i in range(len(self.unlabeled)):
-            if not any(torch.equal(self.unlabeled[i][0], item[0]) and self.unlabeled[i][1] == item[1] for item in data_to_label):
+            x, y = self.unlabeled[i]
+            if tensor_hash(x, y) not in labeled_hashes:
                 keep_indices.append(i)
         self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
         return self.train_dataloader(), self.unlabeled_dataloader()
