@@ -290,7 +290,6 @@ class CalibrationEvaluator:
             model.eval()
             x_ref, y_ref, x_prime_ref, y_prime_ref = self._get_samples_for_mcmd(model, sample_loader)
             x_kernel, y_kernel = self._get_kernel_functions(y_ref)
-            print("Point C1A")
             uncertainty_scores = []
             batch_indices = []
             
@@ -302,24 +301,19 @@ class CalibrationEvaluator:
                     encoder = self._encode_image
                 else:
                     encoder = self._encode_text
-                print("Point C1B")
                 inputs = inputs.to(self.device)
                 encoded_inputs = encoder(inputs)
-                print("Point C1C")
                 # Predictive samples for this batch
                 y_hat = model.predict(inputs)
-                print("Point C1D")
                 x_prime = torch.repeat_interleave(
                     encoded_inputs,
                     repeats=self.settings.cce_settings.num_mc_samples,
                     dim=0,
                 )
-                print("Point C1E")
                 y_prime = model.sample(
                     y_hat,
                     num_samples=self.settings.cce_settings.num_mc_samples,
                 ).flatten()
-                print("Point C1F")
                 # Compute MCMD/CCE between reference and this batch
                 # Use the batch as the "grid" for CCE computation
                 cce_val = compute_mcmd_torch(
@@ -332,7 +326,6 @@ class CalibrationEvaluator:
                     y_kernel=y_kernel,
                     lmbda=self.settings.cce_settings.lmbda,
                 )
-                print("Point C1G")
                 # Aggregate CCE for this batch (mean over grid points)
                 uncertainty_scores.append(cce_val.mean().item())
                 batch_indices.append(batch_idx)

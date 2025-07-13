@@ -66,11 +66,12 @@ def select_samples(
     # temporary assert statement, the check should be loading the config
     assert metric in ["cce"]
     if metric == "cce":
-        print("Point C1")
         uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(
             model, training_data, unlabeled_data
         )
         print("Point C2")
+        print('k ', num_samples)
+        print('scores: ', uncertainty_scores.shape)
         topk_indices = torch.topk(uncertainty_scores, k=num_samples).indices
         print("Point C3")
         highest_uncertainty_batches = [
