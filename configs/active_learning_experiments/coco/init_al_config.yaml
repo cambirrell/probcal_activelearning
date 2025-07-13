@@ -26,7 +26,7 @@ evaluation:
   num_trials: 1
   log_dir: logs
 active_learning:
-  samples_per_iteration: 10
+  samples_per_iteration: 32
   initial_labeled_partition: 10
   plot_results: true
   uncertainty_metric: cce
