@@ -67,7 +67,7 @@ def select_samples(
         uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(
             model, training_data, unlabeled_data
         )
-        topk_indices = torch.topk(uncertainty_scores, k=num_samples).indices
+        topk_indices = torch.topk(uncertainty_scores, k=min(num_samples, uncertainty_scores.shape[0])).indices
         highest_uncertainty_batches = [
             batch for i, batch in enumerate(unlabeled_data) if i in topk_indices.tolist()
         ]
@@ -141,6 +141,8 @@ def main(config: ActiveLearningConfig) -> None:
     # Lets see is dataloader has a len component to see if there is any data left
     while len(unlabeled_data) > 0:
         # Train the model on the sampled data
+        print(f"Before iteration: Training set size = {len(datamodule.train)}, Unlabeled set size = {len(datamodule.unlabeled)}")
+
         model, val_metric = train_samples(model, config, datamodule)
         eval_results.append(
             {
@@ -156,6 +158,9 @@ def main(config: ActiveLearningConfig) -> None:
         training_data, unlabeled_data = datamodule.active_learning_add_label_data(
             data_to_label=selected_samples
         )
+
+        print(f"After iteration: Training set size = {len(datamodule.train)}, Unlabeled set size = {len(datamodule.unlabeled)}")
+
         # reinitialize the model to train on the new data
         del model
         model = get_model(config)
