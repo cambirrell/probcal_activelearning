@@ -286,6 +286,8 @@ class CalibrationEvaluator:
                     - batch_indices: (num_batches,) tensor of batch indices.
             """
             # Get reference samples (labeled)
+            model.to(self.device)
+            model.eval()
             x_ref, y_ref, x_prime_ref, y_prime_ref = self._get_samples_for_mcmd(model, sample_loader)
             x_kernel, y_kernel = self._get_kernel_functions(y_ref)
             print("Point C1A")
