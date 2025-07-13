@@ -144,8 +144,6 @@ def main(config: ActiveLearningConfig) -> None:
     #budget = config.budget
     eval_results = []
     num_labeled_batches = config.initial_labeled_partition
-    training_data = datamodule.train_dataloader()
-    validation_data = datamodule.val_dataloader()
     unlabeled_data = datamodule.unlabeled_dataloader()
     # Lets see is dataloader has a len component to see if there is any data left
     while len(unlabeled_data) > 0:
@@ -160,6 +158,7 @@ def main(config: ActiveLearningConfig) -> None:
             )
         print("Point C")
         # Select samples from the unlabeled data based on the uncertainty metric
+        training_data = datamodule.train_dataloader()
         selected_samples = select_samples(unlabeled_data, training_data, model, config.sample_per_iteration, config.uncertainty_metric) 
         print("Point D")
         # update the training data with the selected samples
@@ -168,9 +167,12 @@ def main(config: ActiveLearningConfig) -> None:
         )
         print("Point E")
         # reinitialize the model to train on the new data
+        del model
         model = get_model(config)
+        model.to(device)
 
-    model, val_metric = train_samples(model, config, training_data, validation_data)
+
+    model, val_metric = train_samples(model, config, datamodule)
     eval_results.append(
             {
                 "Batches_Labeled": num_labeled_batches,
