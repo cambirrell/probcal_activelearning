@@ -141,7 +141,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             raise ValueError("Active learning setup has not been done. Did you call `unlabeled_partion_setup` yet?")
         train_len_before = len(self.train)
         unlabeled_len_before = len(self.unlabeled)
-        print(f"Before: train={train_len_before}, unlabeled={unlabeled_len_before}")
+        # print(f"Before: train={train_len_before}, unlabeled={unlabeled_len_before}")
 
         self.train = torch.utils.data.ConcatDataset([self.train, labeled_data])
 
@@ -154,7 +154,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
                 y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist())
             )
         labeled_hashes = set(tensor_hash(x, y) for x, y in data_to_label)
-        print(f"Unique hashes in data_to_label: {len(labeled_hashes)}")
+        # print(f"Unique hashes in data_to_label: {len(labeled_hashes)}")
         keep_indices = []
         removed_count = 0
         for i in range(len(self.unlabeled)):
@@ -163,9 +163,9 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
                 keep_indices.append(i)
             else:
                 removed_count += 1
-        print(f"Samples removed from unlabeled: {removed_count}")
+        # print(f"Samples removed from unlabeled: {removed_count}")
         self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
-        print(f"After: train={len(self.train)}, unlabeled={len(self.unlabeled)}")
+        # print(f"After: train={len(self.train)}, unlabeled={len(self.unlabeled)}")
         return self.train_dataloader(), self.unlabeled_dataloader()
 
 
