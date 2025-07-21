@@ -125,6 +125,10 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         self.al_setup = True
     
     def active_learning_add_label_data(self, data_to_label: list[tuple[torch.Tensor, torch.Tensor]]):
+        print(f"Data label: {type(data_to_label)}")
+        print(f"Data label: {type(data_to_label[0])}")
+        print(f"Data label: {type(data_to_label[0][0])}")
+        
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
         labeled_data = torch.utils.data.TensorDataset(
