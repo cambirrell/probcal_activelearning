@@ -1,4 +1,4 @@
-experiment_name: eva/stirn
+experiment_name: eva/al
 random_seed: 1998
 head_type: faithful_gaussian
 dataset:
