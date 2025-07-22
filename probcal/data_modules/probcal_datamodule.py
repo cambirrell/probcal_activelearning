@@ -128,13 +128,14 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"Data label: {type(data_to_label)}")
         print(f"Data label: {type(data_to_label[0])}")
         print(f"Data label: {type(data_to_label[0][0])}")
-        
+        print(f"Length of labeled: {len(data_to_label)}")
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
         labeled_data = torch.utils.data.TensorDataset(
             torch.stack([item[0] for item in data_to_label]),
             torch.stack([item[1] for item in data_to_label])
         )
+        print(f"data shape: {labeled_data.shape}")
         if self.train is None:
             raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
         if not self.al_setup:
