@@ -170,7 +170,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
                 keep_indices.append(i)
             else:
                 removed_count += 1
-        # print(f"Samples removed from unlabeled: {removed_count}")
+        print(f"Samples removed from unlabeled: {removed_count}")
         self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
         # print(f"After: train={len(self.train)}, unlabeled={len(self.unlabeled)}")
         return self.train_dataloader(), self.unlabeled_dataloader()
