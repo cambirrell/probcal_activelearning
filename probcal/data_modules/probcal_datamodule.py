@@ -130,6 +130,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"Data label: {type(data_to_label[0][0])}")
         print(f"Data label: {data_to_label[0][0].shape}")
         print(f"Data label: {data_to_label[0][1].shape}")
+        print(f"Data label: {data_to_label[0][1]}")
         print(f"Length of labeled: {len(data_to_label)}")
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
