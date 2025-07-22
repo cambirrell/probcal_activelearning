@@ -32,6 +32,7 @@ def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig,
     Train the model on the sampled data.
     """
     fix_random_seed(config.random_seed)
+    print(f"1a train={len(datamodule.train)}")
     logger = CSVLogger(save_dir=config.log_dir, name=config.experiment_name)
     chkp_dir = config.chkp_dir / config.experiment_name 
     chkp_callbacks = get_chkp_callbacks(chkp_dir, config.chkp_freq)
@@ -46,8 +47,11 @@ def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig,
         logger=logger,
         precision=config.precision,
     )
+    print(f"1b train={len(datamodule.train)}")
     trainer.fit(model=model, datamodule=datamodule)
+    print(f"1c train={len(datamodule.train)}")
     val_metrics = trainer.validate(model=model, datamodule=datamodule)
+    print(f"1d train={len(datamodule.train)}")
     return model, val_metrics
 
 
