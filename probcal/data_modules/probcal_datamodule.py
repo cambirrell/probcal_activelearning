@@ -135,7 +135,10 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             torch.stack([item[0] for item in data_to_label]),
             torch.stack([item[1] for item in data_to_label])
         )
-        print(f"data shape: {labeled_data.shape}")
+        print(f"data length: {len(labeled_data)}")
+        print("Shape____")
+        x, y = labeled_data[0]
+        print(x.shape, y.shape)
         if self.train is None:
             raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
         if not self.al_setup:
