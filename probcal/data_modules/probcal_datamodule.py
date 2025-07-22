@@ -149,7 +149,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         train_len_before = len(self.train)
         unlabeled_len_before = len(self.unlabeled)
         # print(f"Before: train={train_len_before}, unlabeled={unlabeled_len_before}")
-
+        print(len(self.train), len(labeled_data))
         self.train = torch.utils.data.ConcatDataset([self.train, labeled_data])
 
         # Efficient removal using hashes
