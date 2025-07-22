@@ -145,6 +145,7 @@ def main(config: ActiveLearningConfig) -> None:
         print(f"Before: train={len(datamodule.train)}, unlabeled={len(datamodule.unlabeled)}")
 
         model, val_metric = train_samples(model, config, datamodule)
+        print(f"1 train={len(datamodule.train)}")
         eval_results.append(
             {
                 "Batches_Labeled": num_labeled_batches,
@@ -156,11 +157,12 @@ def main(config: ActiveLearningConfig) -> None:
         training_data = datamodule.train_dataloader()
         selected_samples = select_samples(unlabeled_data, training_data, model, config.sample_per_iteration, config.uncertainty_metric) 
         # update the training data with the selected samples
+        print(f"2 train={len(datamodule.train)}")
         print(f"Selected samples this iteration: {len(selected_samples)}")
         training_data, unlabeled_data = datamodule.active_learning_add_label_data(
             data_to_label=selected_samples
         )
-
+        print(f"3 train={len(datamodule.train)}")
         print(f"After: train={len(datamodule.train)}, unlabeled={len(datamodule.unlabeled)}")
         exit()
         # reinitialize the model to train on the new data
