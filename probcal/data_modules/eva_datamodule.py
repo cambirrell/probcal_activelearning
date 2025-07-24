@@ -40,6 +40,8 @@ class EVADataModule(ProbcalDataModule):
         EVADataset(self.root_dir, split="train")
 
     def setup(self, stage):
+        if self.al_setup:
+            return
         print("SETUP Called")
         resize = Resize((self.IMG_SIZE, self.IMG_SIZE))
         augment = AutoAugment()

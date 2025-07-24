@@ -42,6 +42,8 @@ class FGNetDataModule(ProbcalDataModule):
         FGNetDataset(self.root_dir)
 
     def setup(self, stage: str):
+        if self.al_setup:
+            return
         resize = Resize((self.IMG_SIZE, self.IMG_SIZE))
         augment = AutoAugment()
         normalize = Normalize(mean=self.IMAGE_NET_MEAN, std=self.IMAGE_NET_STD)

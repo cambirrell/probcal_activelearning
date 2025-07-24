@@ -38,6 +38,8 @@ class COCOPeopleDataModule(ProbcalDataModule):
         COCOPeopleDataset(self.root_dir, split="train")
 
     def setup(self, stage):
+        if self.al_setup:
+            return
         resize = Resize((self.IMG_SIZE, self.IMG_SIZE))
         augment = AutoAugment()
         normalize = Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))

@@ -30,6 +30,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         self.train = None
         self.val = None
         self.test = None
+        self.al_setup = False
 
     def prepare_data(self):
         raise NotImplementedError("Must be implemented by subclass.")

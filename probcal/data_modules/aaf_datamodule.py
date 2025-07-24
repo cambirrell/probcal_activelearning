@@ -35,6 +35,8 @@ class AAFDataModule(ProbcalDataModule):
         AAFDataset(self.root_dir, split="train")
 
     def setup(self, stage):
+        if self.al_setup:
+            return
         resize = Resize((self.IMG_SIZE, self.IMG_SIZE))
         augment = AutoAugment()
         normalize = Normalize(
