@@ -164,6 +164,10 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             )
         
         def tensors_equal(a, b, atol=1e-6):
+            print(f"a 0 {type(a[0])}")
+            print(f"b 0 {type(b[0])}")
+            print(f"a 1 {type(a[1])}")
+            print(f"b 1 {type(b[1])}")
             return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(a[1], b[1], atol=atol)
 
 
