@@ -175,7 +175,9 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"Unique hashes in data_to_label: {len(labeled_hashes)}")
         keep_indices = []
         removed_count = 0
+        print(f"Length of unlabeled {len(self.unlabeled)}")
         for i in range(len(self.unlabeled)):
+            print(f"label {i}")
             self.unlabeled[i] = (torch.Tensor(self.unlabeled[i][0]), torch.Tensor(self.unlabeled[i][1]))
             unlabeled_sample = self.unlabeled[i]
             found = False
