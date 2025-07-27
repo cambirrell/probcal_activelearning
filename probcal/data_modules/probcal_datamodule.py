@@ -168,7 +168,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             print(f"b 0 {type(b[0])}")
             print(f"a 1 {type(a[1])}")
             print(f"b 1 {type(b[1])}")
-            return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(torch.Tensor(a[1]), b[1], atol=atol)
+            return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(torch.tensor(a[1]), b[1], atol=atol)
 
 
         labeled_hashes = set(tensor_hash(torch.tensor(x), torch.tensor(y)) for x, y in data_to_label)
@@ -178,7 +178,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"Length of unlabeled {len(self.unlabeled)}")
         for i in range(len(self.unlabeled)):
             print(f"label {i}")
-            self.unlabeled[i] = (self.unlabeled[i][0], torch.tensor(self.unlabeled[i][1]))
+            # self.unlabeled[i] = (self.unlabeled[i][0], torch.tensor(self.unlabeled[i][1]))
             print(f"label {i} point 1")
             unlabeled_sample = self.unlabeled[i]
             found = False
