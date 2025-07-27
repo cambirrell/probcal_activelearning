@@ -164,10 +164,10 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             )
         
         def tensors_equal(a, b, atol=1e-6):
-            print(f"a 0 {type(a[0])}")
-            print(f"b 0 {type(b[0])}")
-            print(f"a 1 {type(a[1])}")
-            print(f"b 1 {type(b[1])}")
+            # print(f"a 0 {type(a[0])}")
+            # print(f"b 0 {type(b[0])}")
+            # print(f"a 1 {type(a[1])}")
+            # print(f"b 1 {type(b[1])}")
             return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(torch.tensor(a[1]), b[1], atol=atol)
 
 
@@ -177,14 +177,14 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         removed_count = 0
         print(f"Length of unlabeled {len(self.unlabeled)}")
         for i in range(len(self.unlabeled)):
-            print(f"label {i}")
+            # print(f"label {i}")
             # self.unlabeled[i] = (self.unlabeled[i][0], torch.tensor(self.unlabeled[i][1]))
-            print(f"label {i} point 1")
+            # print(f"label {i} point 1")
             unlabeled_sample = self.unlabeled[i]
             found = False
             for labeled_sample in data_to_label:
                 if tensors_equal(unlabeled_sample, labeled_sample):
-                    print(f"label {i} point 2")
+                    # print(f"label {i} point 2")
                     found = True
                     break
             if not found:
