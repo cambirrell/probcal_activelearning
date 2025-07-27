@@ -168,7 +168,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             print(f"b 0 {type(b[0])}")
             print(f"a 1 {type(a[1])}")
             print(f"b 1 {type(b[1])}")
-            return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(a[1], b[1], atol=atol)
+            return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(torch.Tensor(a[1]), b[1], atol=atol)
 
 
         labeled_hashes = set(tensor_hash(x, y) for x, y in data_to_label)
