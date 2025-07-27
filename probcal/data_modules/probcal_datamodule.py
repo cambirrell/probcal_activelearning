@@ -171,7 +171,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(torch.Tensor(a[1]), b[1], atol=atol)
 
 
-        labeled_hashes = set(tensor_hash(x, y) for x, y in data_to_label)
+        labeled_hashes = set(tensor_hash(x, y) for tensor.Torch(x), tensor.Tensor(y) in data_to_label)
         print(f"Unique hashes in data_to_label: {len(labeled_hashes)}")
         keep_indices = []
         removed_count = 0
