@@ -178,7 +178,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"Length of unlabeled {len(self.unlabeled)}")
         for i in range(len(self.unlabeled)):
             print(f"label {i}")
-            self.unlabeled[i] = (torch.tensor(self.unlabeled[i][0]), torch.tensor(self.unlabeled[i][1]))
+            self.unlabeled[i] = (self.unlabeled[i][0], torch.tensor(self.unlabeled[i][1]))
             print(f"label {i} point 1")
             unlabeled_sample = self.unlabeled[i]
             found = False
