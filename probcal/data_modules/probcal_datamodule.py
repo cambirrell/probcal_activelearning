@@ -177,8 +177,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         removed_count = 0
         for i in range(len(self.unlabeled)):
             unlabeled_sample = self.unlabeled[i]
-            self.unlabeled[i][0] = torch.Tensor(self.unlabeled[i][0])
-            self.unlabeled[i][1] = torch.Tensor(self.unlabeled[i][1])
+            self.unlabeled[i] = (torch.Tensor(self.unlabeled[i][0]), torch.Tensor(self.unlabled[i][1]))
             found = False
             for labeled_sample in data_to_label:
                 if tensors_equal(unlabeled_sample, labeled_sample):
