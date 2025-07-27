@@ -3,6 +3,7 @@ from typing import Literal
 
 import lightning as L
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset, random_split
 
