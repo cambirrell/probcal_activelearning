@@ -179,10 +179,12 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         for i in range(len(self.unlabeled)):
             print(f"label {i}")
             self.unlabeled[i] = (torch.Tensor(self.unlabeled[i][0]), torch.Tensor(self.unlabeled[i][1]))
+            print(f"label {i} point 1")
             unlabeled_sample = self.unlabeled[i]
             found = False
             for labeled_sample in data_to_label:
                 if tensors_equal(unlabeled_sample, labeled_sample):
+                    print(f"label {i} point 2")
                     found = True
                     break
             if not found:
