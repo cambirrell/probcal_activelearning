@@ -171,7 +171,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             else:
                 return torch.tensor(x)  # fallback for lists, scalars, etc.
 
-        def tensors_equal(a, b, atol=1e-6):
+        def tensors_equal(a, b, atol=1e-4):
             # print(f"a 0 {type(a[0])}")
             # print(f"b 0 {type(b[0])}")
             # print(f"a 1 {type(a[1])}")
