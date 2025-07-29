@@ -10,7 +10,7 @@ training:
   chkp_dir: chkp
   chkp_freq: 5
   num_epochs: 5
-  num_workers: 1
+  num_workers: 3
   precision: bf16-mixed
   optimizer:
     type: adam_w
