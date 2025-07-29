@@ -168,7 +168,6 @@ def main(config: ActiveLearningConfig) -> None:
         )
         print(f"3 train={len(datamodule.train)}")
         print(f"After: train={len(datamodule.train)}, unlabeled={len(datamodule.unlabeled)}")
-        exit()
         # reinitialize the model to train on the new data
         del model
         model = get_model(config)
