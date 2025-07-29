@@ -163,12 +163,20 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
                 y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist())
             )
         
+        def as_tensor(x):
+            if isinstance(x, torch.Tensor):
+                return x
+            elif isinstance(x, np.ndarray):
+                return torch.from_numpy(x)
+            else:
+                return torch.tensor(x)  # fallback for lists, scalars, etc.
+
         def tensors_equal(a, b, atol=1e-6):
             # print(f"a 0 {type(a[0])}")
             # print(f"b 0 {type(b[0])}")
             # print(f"a 1 {type(a[1])}")
             # print(f"b 1 {type(b[1])}")
-            return torch.allclose(a[0], b[0], atol=atol) and torch.allclose(torch.tensor(a[1]), b[1], atol=atol)
+            return torch.allclose(as_tensor(a[0]), as_tensor(b[0]), atol=atol) and torch.allclose(as_tensor(a[1]), as_tensor(b[1]), atol=atol))
 
 
         labeled_hashes = set(tensor_hash(torch.tensor(x), torch.tensor(y)) for x, y in data_to_label)
