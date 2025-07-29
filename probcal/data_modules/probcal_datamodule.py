@@ -178,6 +178,13 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             # print(f"b 1 {type(b[1])}")
             return torch.allclose(as_tensor(a[0]), as_tensor(b[0]), atol=atol) and torch.allclose(as_tensor(a[1]), as_tensor(b[1]), atol=atol)
 
+        def to_tensor_dataset(dataset):
+            xs = []
+            ys = []
+            for x, y in dataset:
+                xs.append(torch.as_tensor(x))
+                ys.append(torch.as_tensor(y))
+            return torch.utils.data.TensorDataset(torch.stack(xs), torch.stack(ys))
 
         labeled_hashes = set(tensor_hash(as_tensor(x), as_tensor(y)) for x, y in data_to_label)
         print(f"Unique hashes in data_to_label: {len(labeled_hashes)}")
@@ -201,6 +208,8 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
                 removed_count += 1
         print(f"Samples removed from unlabeled: {removed_count}")
         self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
+        self.unlabeled = to_tensor_dataset(self.unlabeled)
+
         # print(f"After: train={len(self.train)}, unlabeled={len(self.unlabeled)}")
         return self.train_dataloader(), self.unlabeled_dataloader()
 
