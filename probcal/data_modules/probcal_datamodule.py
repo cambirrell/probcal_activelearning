@@ -143,7 +143,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"data length: {len(labeled_data)}")
         print("Shape____")
         x, y = labeled_data[0]
-        print(x.shape, y.shape)
+        # print(x.shape, y.shape)
         if self.train is None:
             raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
         if not self.al_setup:
