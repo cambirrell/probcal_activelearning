@@ -112,105 +112,62 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             persistent_workers=self.persistent_workers,
         )
     
+
     def unlabeled_partion_setup(self, partition_size: int):
-        """
-        Sets up the unlabeled dataset by partitioning the training data.
-        """
         if self.train is None:
             raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
         if not (0 < partition_size < len(self.train)):
-            raise ValueError("Partition size must be between 0 and 1.")
-        # This should split the amount of training data into a partition for unlabeled data
+            raise ValueError("Partition size must be a value between 0 and the length of the training set.")
+
         n = len(self.train)
-        generator = torch.Generator().manual_seed(42)  # For reproducibility
-        self.train, self.unlabeled = random_split(self.train, [partition_size, n - partition_size], generator=generator)
+        all_indices = list(range(n))
+        # For reproducibility, you can use a torch.Generator
+        np.random.shuffle(all_indices)
+
+        labeled_indices = all_indices[:partition_size]
+        unlabeled_indices = all_indices[partition_size:]
+
+        # Keep a reference to the original, full dataset
+        self.original_train_dataset = self.train
+        self.train = torch.utils.data.Subset(self.original_train_dataset, labeled_indices)
+        self.unlabeled = torch.utils.data.Subset(self.original_train_dataset, unlabeled_indices)
         self.al_setup = True
     
     def active_learning_add_label_data(self, data_to_label: list[tuple[torch.Tensor, torch.Tensor]]):
-        print(f"Data label: {type(data_to_label)}")
-        print(f"Data label: {type(data_to_label[0])}")
-        print(f"Data label: {type(data_to_label[0][0])}")
-        print(f"Data label: {data_to_label[0][0].shape}")
-        print(f"Data label: {data_to_label[0][1].shape}")
-        print(f"Data label: {data_to_label[0][1]}")
-        print(f"Length of labeled: {len(data_to_label)}")
-        def as_tensor(x):
-            if isinstance(x, torch.Tensor):
-                return x
-            elif isinstance(x, np.ndarray):
-                return torch.from_numpy(x)
-            else:
-                return torch.tensor(x)  # fallback for lists, scalars, etc.
+        """
+        Updates the training and unlabeled datasets with new labeled data.
+
+        This implementation identifies the indices of the selected samples in the original
+        dataset and redefines the `train` and `unlabeled` datasets using these indices.
+        This is more efficient than the previous implementation and avoids type errors.
+        """
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
-        labeled_data = torch.utils.data.TensorDataset(
-            torch.stack([as_tensor(item[0]) for item in data_to_label]),
-            torch.stack([as_tensor(item[1]) for item in data_to_label])
-        )
-        print(f"data length: {len(labeled_data)}")
-        print("Shape____")
-        x, y = labeled_data[0]
-        # print(x.shape, y.shape)
-        if self.train is None:
-            raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
-        if not self.al_setup:
-            raise ValueError("Active learning setup has not been done. Did you call `unlabeled_partion_setup` yet?")
-        train_len_before = len(self.train)
-        unlabeled_len_before = len(self.unlabeled)
-        # print(f"Before: train={train_len_before}, unlabeled={unlabeled_len_before}")
-        print(len(self.train), len(labeled_data))
-        self.train = torch.utils.data.ConcatDataset([self.train, labeled_data])
 
-        # Efficient removal using hashes
-        def tensor_hash(x, y):
-            if not isinstance(y, torch.Tensor):
-                y = torch.as_tensor(y)
-            return (
-                x.cpu().numpy().tobytes(),
-                y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist())
-            )
-        
+        # Assuming `self.unlabeled` is a Subset of the original training data
+        original_dataset = self.unlabeled.dataset
+        unlabeled_indices = self.unlabeled.indices
 
-        def tensors_equal(a, b, atol=1e-3):
-            # print(f"a 0 {type(a[0])}")
-            # print(f"b 0 {type(b[0])}")
-            # print(f"a 1 {type(a[1])}")
-            # print(f"b 1 {type(b[1])}")
-            return torch.allclose(as_tensor(a[0]), as_tensor(b[0]), atol=atol) and torch.allclose(as_tensor(a[1]), as_tensor(b[1]), atol=atol)
+        # Create a mapping of data to original indices for quick lookup
+        # This is a simplified example; for complex data, a more robust mapping may be needed
+        data_to_original_idx = {i: (original_dataset[i][0].numpy().tobytes(), original_dataset[i][1].item()) for i in unlabeled_indices}
 
-        def to_tensor_dataset(dataset):
-            xs = []
-            ys = []
-            for x, y in dataset:
-                xs.append(torch.as_tensor(x))
-                ys.append(torch.as_tensor(y))
-            return torch.utils.data.TensorDataset(torch.stack(xs), torch.stack(ys))
-
-        labeled_hashes = set(tensor_hash(as_tensor(x), as_tensor(y)) for x, y in data_to_label)
-        print(f"Unique hashes in data_to_label: {len(labeled_hashes)}")
-        keep_indices = []
-        removed_count = 0
-        print(f"Length of unlabeled {len(self.unlabeled)}")
-        for i in range(len(self.unlabeled)):
-            # print(f"label {i}")
-            # self.unlabeled[i] = (self.unlabeled[i][0], torch.tensor(self.unlabeled[i][1]))
-            # print(f"label {i} point 1")
-            unlabeled_sample = self.unlabeled[i]
-            found = False
-            for labeled_sample in data_to_label:
-                if tensors_equal(unlabeled_sample, labeled_sample):
-                    # print(f"label {i} point 2")
-                    found = True
+        # Identify the indices of the samples to be labeled
+        selected_indices = set()
+        for x, y in data_to_label:
+            for idx, (data_bytes, label_val) in data_to_original_idx.items():
+                if x.numpy().tobytes() == data_bytes and y.item() == label_val:
+                    selected_indices.add(idx)
                     break
-            if not found:
-                keep_indices.append(i)
-            else:
-                removed_count += 1
-        print(f"Samples removed from unlabeled: {removed_count}")
-        self.unlabeled = torch.utils.data.Subset(self.unlabeled, keep_indices)
-        self.unlabeled = to_tensor_dataset(self.unlabeled)
 
-        # print(f"After: train={len(self.train)}, unlabeled={len(self.unlabeled)}")
+        # Update the indices for the training and unlabeled sets
+        new_labeled_indices = list(set(self.train.indices) | selected_indices)
+        new_unlabeled_indices = list(set(unlabeled_indices) - selected_indices)
+
+        # Create new Subset objects for the updated datasets
+        self.train = torch.utils.data.Subset(original_dataset, new_labeled_indices)
+        self.unlabeled = torch.utils.data.Subset(original_dataset, new_unlabeled_indices)
+
         return self.train_dataloader(), self.unlabeled_dataloader()
 
 

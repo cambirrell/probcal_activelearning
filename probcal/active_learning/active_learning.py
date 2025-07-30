@@ -142,10 +142,10 @@ def main(config: ActiveLearningConfig) -> None:
     #budget = config.budget
     eval_results = []
     num_labeled_batches = config.initial_labeled_partition
-    unlabeled_data = datamodule.unlabeled_dataloader()
     # Lets see is dataloader has a len component to see if there is any data left
     while len(unlabeled_data) > 0:
         # Train the model on the sampled data
+        unlabeled_data = datamodule.unlabeled_dataloader()
         print(f"Before: train={len(datamodule.train)}, unlabeled={len(datamodule.unlabeled)}")
 
         model, val_metric = train_samples(model, config, datamodule)
