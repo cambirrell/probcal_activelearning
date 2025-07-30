@@ -134,11 +134,18 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         print(f"Data label: {data_to_label[0][1].shape}")
         print(f"Data label: {data_to_label[0][1]}")
         print(f"Length of labeled: {len(data_to_label)}")
+        def as_tensor(x):
+            if isinstance(x, torch.Tensor):
+                return x
+            elif isinstance(x, np.ndarray):
+                return torch.from_numpy(x)
+            else:
+                return torch.tensor(x)  # fallback for lists, scalars, etc.
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
         labeled_data = torch.utils.data.TensorDataset(
-            torch.stack([item[0] for item in data_to_label]),
-            torch.stack([item[1] for item in data_to_label])
+            torch.stack([as_tensor(item[0]) for item in data_to_label]),
+            torch.stack([as_tensor(item[1]) for item in data_to_label])
         )
         print(f"data length: {len(labeled_data)}")
         print("Shape____")
@@ -163,13 +170,6 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
                 y.item() if y.numel() == 1 else tuple(y.cpu().numpy().tolist())
             )
         
-        def as_tensor(x):
-            if isinstance(x, torch.Tensor):
-                return x
-            elif isinstance(x, np.ndarray):
-                return torch.from_numpy(x)
-            else:
-                return torch.tensor(x)  # fallback for lists, scalars, etc.
 
         def tensors_equal(a, b, atol=1e-3):
             # print(f"a 0 {type(a[0])}")
