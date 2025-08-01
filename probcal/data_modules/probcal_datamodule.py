@@ -5,7 +5,8 @@ import lightning as L
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import Dataset, random_split, Subset
+
 
 from probcal.data_modules.bootstrap_mixin import BootstrapMixin
 
@@ -77,9 +78,18 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             raise ValueError("Invalid split specified. Must be 'val' or 'test'.")
         super().set_bootstrap_indices(split, None)
 
+        def _toggle_indices(self, dataset: Dataset, state: bool):
+            """Helper to safely toggle index returning on the base dataset."""
+            # A dataset can be a Subset, so we need the underlying dataset object
+            base_dataset = dataset.dataset if isinstance(dataset, Subset) else dataset
+            if hasattr(base_dataset, 'return_index'):
+                base_dataset.return_index(state)
+
+
     def train_dataloader(self) -> DataLoader:
         if self.train is None:
             raise ValueError("The `train` attribute has not been set. Did you call `setup` yet?")
+        self._toggle_indices(self.train, False)
         return DataLoader(
             self.train,
             batch_size=self.batch_size,
@@ -91,6 +101,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
     def val_dataloader(self) -> DataLoader:
         if self.val is None:
             raise ValueError("The `val` attribute has not been set. Did you call `setup` yet?")
+        self._toggle_indices(self.val, False)
         return self.get_dataloader(
             split="val",
             dataset=self.val,
@@ -103,6 +114,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
     def test_dataloader(self) -> DataLoader:
         if self.test is None:
             raise ValueError("The `test` attribute has not been set. Did you call `setup` yet?")
+        self._toggle_indices(self.test, False)
         return self.get_dataloader(
             split="test",
             dataset=self.test,
@@ -133,40 +145,20 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         self.unlabeled = torch.utils.data.Subset(self.original_train_dataset, unlabeled_indices)
         self.al_setup = True
     
-    def active_learning_add_label_data(self, data_to_label: list[tuple[torch.Tensor, torch.Tensor]]):
-        """
-        Updates the training and unlabeled datasets with new labeled data.
+    def active_learning_add_label_data(self, indices_to_label: list[int]):
+        # Use sets for efficient operations
+        indices_to_label_set = set(indices_to_label)
+        unlabeled_indices_set = set(self.unlabeled_indices)
 
-        This implementation identifies the indices of the selected samples in the original
-        dataset and redefines the `train` and `unlabeled` datasets using these indices.
-        This is more efficient than the previous implementation and avoids type errors.
-        """
-        if self.unlabeled is None:
-            raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
+        # Add to training set by extending the list
+        self.train_indices.extend(list(indices_to_label_set))
 
-        # Assuming `self.unlabeled` is a Subset of the original training data
-        original_dataset = self.unlabeled.dataset
-        unlabeled_indices = self.unlabeled.indices
+        # Remove from unlabeled set using set difference
+        self.unlabeled_indices = list(unlabeled_indices_set - indices_to_label_set)
 
-        # Create a mapping of data to original indices for quick lookup
-        # This is a simplified example; for complex data, a more robust mapping may be needed
-        data_to_original_idx = {i: (original_dataset[i][0].numpy().tobytes(), original_dataset[i][1].item()) for i in unlabeled_indices}
-
-        # Identify the indices of the samples to be labeled
-        selected_indices = set()
-        for x, y in data_to_label:
-            for idx, (data_bytes, label_val) in data_to_original_idx.items():
-                if x.numpy().tobytes() == data_bytes and y.item() == label_val:
-                    selected_indices.add(idx)
-                    break
-
-        # Update the indices for the training and unlabeled sets
-        new_labeled_indices = list(set(self.train.indices) | selected_indices)
-        new_unlabeled_indices = list(set(unlabeled_indices) - selected_indices)
-
-        # Create new Subset objects for the updated datasets
-        self.train = torch.utils.data.Subset(original_dataset, new_labeled_indices)
-        self.unlabeled = torch.utils.data.Subset(original_dataset, new_unlabeled_indices)
+        # Recreate the datasets with the updated indices
+        self.train = Subset(self.original_train_dataset, self.train_indices)
+        self.unlabeled = Subset(self.original_train_dataset, self.unlabeled_indices)
 
         return self.train_dataloader(), self.unlabeled_dataloader()
 
@@ -182,6 +174,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
         """
         if self.unlabeled is None:
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
+        self._toggle_indices(self.unlabeled, True)
         return DataLoader(
             self.unlabeled,
             batch_size=self.batch_size,

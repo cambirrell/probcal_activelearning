@@ -77,8 +77,6 @@ def select_samples(
         # Flatten to a list of (x, y) tuples
         data_to_label = []
         for x_batch, y_batch in selected_batches:
-            print("x shape: ", x_batch.shape)
-            print("y shape: ", y_batch.shape)
             data_to_label.extend(list(zip(x_batch, y_batch)))
     else:
         raise NotImplementedError
