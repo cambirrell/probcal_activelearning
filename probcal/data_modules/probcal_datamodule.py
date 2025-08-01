@@ -78,12 +78,12 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             raise ValueError("Invalid split specified. Must be 'val' or 'test'.")
         super().set_bootstrap_indices(split, None)
 
-        def _toggle_indices(self, dataset: Dataset, state: bool):
-            """Helper to safely toggle index returning on the base dataset."""
-            # A dataset can be a Subset, so we need the underlying dataset object
-            base_dataset = dataset.dataset if isinstance(dataset, Subset) else dataset
-            if hasattr(base_dataset, 'return_index'):
-                base_dataset.return_index(state)
+    def _toggle_indices(self, dataset: Dataset, state: bool):
+        """Helper to safely toggle index returning on the base dataset."""
+        # A dataset can be a Subset, so we need the underlying dataset object
+        base_dataset = dataset.dataset if isinstance(dataset, Subset) else dataset
+        if hasattr(base_dataset, 'return_index'):
+            base_dataset.return_index(state)
 
 
     def train_dataloader(self) -> DataLoader:
