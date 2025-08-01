@@ -2,13 +2,16 @@ from pathlib import Path
 from typing import Callable
 from typing import Literal
 
+from probcal.custom_datasets.mixins import DatasetIndexMixin
+
 import pandas as pd
 from PIL import Image
 from PIL.Image import Image as PILImage
 from torch.utils.data import Dataset
 
 
-class EVADataset(Dataset):
+
+class EVADataset(DatasetIndexMixin, Dataset):
     """
     EVA dataset with images voted on how asthetic they are (labeled with the average asthetic score for each image).
     The original dataset is available at https://github.com/kang-gnak/eva-dataset.
