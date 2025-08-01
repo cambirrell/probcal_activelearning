@@ -2,7 +2,7 @@ import argparse
 import logging
 import os.path
 from datetime import datetime
-from typing import Any
+from typing import Any, List
 
 import math
 import matplotlib.pyplot as plt
@@ -31,8 +31,8 @@ def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig,
     """
     Train the model on the sampled data.
     """
+    # This function remains unchanged
     fix_random_seed(config.random_seed)
-    print(f"1a train={len(datamodule.train)}")
     logger = CSVLogger(save_dir=config.log_dir, name=config.experiment_name)
     chkp_dir = config.chkp_dir / config.experiment_name 
     chkp_callbacks = get_chkp_callbacks(chkp_dir, config.chkp_freq)
@@ -47,63 +47,66 @@ def train_samples(model: ProbabilisticRegressionNN, config:ActiveLearningConfig,
         logger=logger,
         precision=config.precision,
     )
-    print(f"1b train={len(datamodule.train)}")
     trainer.fit(model=model, datamodule=datamodule)
-    print(f"1c train={len(datamodule.train)}")
     val_metrics = trainer.validate(model=model, datamodule=datamodule)
-    print(f"1d train={len(datamodule.train)}")
     return model, val_metrics
 
 
 def select_samples(
-    unlabeled_data: DataLoader, training_data: DataLoader, model: ProbabilisticRegressionNN, num_samples: int, metric: str
-):
+    unlabeled_data: DataLoader, training_data: DataLoader, model: ProbabilisticRegressionNN, num_batches_to_sample: int, metric: str
+) -> List[int]:
     """
-    Select num_samples batches from the unlabeled data based on the uncertainty metric.
-    Returns a list of (x, y) tuples for all samples in the selected batches.
+    Selects samples from the unlabeled data pool based on an uncertainty metric.
+    
+    This function now returns a list of the original dataset indices for the
+    highest-uncertainty samples.
     """
     evaluator = CalibrationEvaluator()
-    assert metric in ["cce"]
+    assert metric in ["cce"], "Currently only 'cce' metric is supported."
     if metric == "cce":
-        uncertainty_scores, scored_batches = evaluator.compute__cce_active_learning(
+        # This function returns a score for each batch in the dataloader
+        uncertainty_scores, _ = evaluator.compute__cce_active_learning(
             model, training_data, unlabeled_data
         )
-        # Collect all batches from the DataLoader into a list
-        all_batches = list(unlabeled_data)
-        # Select indices of the top-k batches
-        topk_indices = torch.topk(uncertainty_scores, k=min(num_samples, len(uncertainty_scores))).indices.tolist()
-        # Select the top batches
-        selected_batches = [all_batches[i] for i in topk_indices]
-        # Flatten to a list of (x, y) tuples
-        data_to_label = []
-        for x_batch, y_batch in selected_batches:
-            data_to_label.extend(list(zip(x_batch, y_batch)))
+
+        # The unlabeled_dataloader now yields (data, target, original_index).
+        # We extract all the original indices from the dataloader's batches.
+        all_original_indices_in_batches = [batch[2] for batch in unlabeled_data]
+
+        # Get the indices of the top-k batches with the highest uncertainty
+        num_to_sample = min(num_batches_to_sample, len(uncertainty_scores))
+        topk_batch_indices = torch.topk(uncertainty_scores, k=num_to_sample).indices
+
+        # Collect all the original sample indices from within those top batches
+        selected_sample_indices = []
+        for batch_idx in topk_batch_indices:
+            # batch[2] is a tensor of original indices for that batch
+            selected_sample_indices.extend(all_original_indices_in_batches[batch_idx].tolist())
+        
+        return selected_sample_indices
     else:
         raise NotImplementedError
-
-    return data_to_label
 
 
 def plot_results(results: Any, log_dir: str):
     """
     Plot the results of the model as more data is sampled.
     """
+    # This function remains unchanged
     plt.figure(figsize=(10, 5))
     plt.plot(results)
     plt.title("Model Performance Over Time")
     plt.xlabel("Number of Samples")
     plt.ylabel("Performance Metric")
     plt.grid()
-    # TODO: Add more details to the plot, like confidence intervals or error bars
-    # TODO: Also give a more descriptive name and save the plot in a specific location
     plt.savefig(log_dir / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
 
 
 def log_results(log_dir:str, eval_results: list) -> None:
     """
     Produces a YAML file with a heading for each training round.
-    It includes eval metric, samples, and batches trained.
     """
+    # This function remains unchanged
     log_dict = {}
     for i, result in enumerate(eval_results):
         round_key = f"round_{i+1}"
@@ -118,12 +121,12 @@ def log_results(log_dir:str, eval_results: list) -> None:
         yaml.dump(log_dict, f)
     print(f"Active learning log saved to {log_path}")
 
+
 def main(config: ActiveLearningConfig) -> None:
     """
     Main function to run the active learning experiment.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # TODO: Add logging setup
 
     model = get_model(config)
     datamodule = get_datamodule(
@@ -136,61 +139,80 @@ def main(config: ActiveLearningConfig) -> None:
     datamodule.unlabeled_partion_setup(config.initial_labeled_partition * config.batch_size)
     model.to(device)
 
-    #To get the whole progress curve we will keep adding until we have trained on all the data
-    #budget = config.budget
     eval_results = []
     num_labeled_batches = config.initial_labeled_partition
-    # Lets see is dataloader has a len component to see if there is any data left
+    
     unlabeled_data = datamodule.unlabeled_dataloader()
-    while len(unlabeled_data) > 0:
-        # Train the model on the sampled data
-        print(f"Before: train={len(datamodule.train)}, unlabeled={len(datamodule.unlabeled)}")
-
+    while len(datamodule.unlabeled) > 0:
+        print(f"\n--- Starting new AL round. Labeled: {len(datamodule.train)}, Unlabeled: {len(datamodule.unlabeled)} ---")
+        
         model, val_metric = train_samples(model, config, datamodule)
-        print(f"1 train={len(datamodule.train)}")
+        
         eval_results.append(
             {
                 "Batches_Labeled": num_labeled_batches,
-                "Samples_Labeled":num_labeled_batches * config.batch_size, 
-                "Eval":val_metric
+                "Samples_Labeled": len(datamodule.train), 
+                "Eval": val_metric
             }
-            )
-        # Select samples from the unlabeled data based on the uncertainty metric
-        training_data = datamodule.train_dataloader()
-        selected_samples = select_samples(unlabeled_data, training_data, model, config.sample_per_iteration, config.uncertainty_metric) 
-        # update the training data with the selected samples
-        print(f"2 train={len(datamodule.train)}")
-        print(f"Selected samples this iteration: {len(selected_samples)}")
-        training_data, unlabeled_data = datamodule.active_learning_add_label_data(
-            data_to_label=selected_samples
         )
-        print(f"3 train={len(datamodule.train)}")
-        print(f"After: train={len(datamodule.train)}, unlabeled={len(datamodule.unlabeled)}")
-        # reinitialize the model to train on the new data
+        
+        training_data = datamodule.train_dataloader()
+        unlabeled_data = datamodule.unlabeled_dataloader()
+
+        if len(unlabeled_data) == 0:
+            break
+
+        # Select the *indices* of samples to label next
+        selected_indices = select_samples(
+            unlabeled_data, 
+            training_data, 
+            model, 
+            config.sample_per_iteration, 
+            config.uncertainty_metric
+        ) 
+
+        if not selected_indices:
+            print("No new samples selected to label. Ending active learning loop.")
+            break
+        
+        print(f"Labeling {len(selected_indices)} new samples identified by uncertainty...")
+        
+        # Update the datasets by passing the list of indices
+        datamodule.active_learning_add_label_data(
+            indices_to_label=selected_indices
+        )
+        
+        num_labeled_batches += config.sample_per_iteration
+
+        # Reinitialize the model to train on the new data from scratch
         del model
         model = get_model(config)
         model.to(device)
-        unlabeled_data = datamodule.unlabeled_dataloader()
 
+    print("\n--- All data has been labeled. Performing final training run. ---")
     model, val_metric = train_samples(model, config, datamodule)
     eval_results.append(
-            {
-                "Batches_Labeled": num_labeled_batches,
-                "Samples_Labeled":num_labeled_batches * config.batch_size, 
-                "Eval":val_metric
-            }
-            )
-    if config.plot_results:
-        plot_results(validation_data, config.log_dir)
+        {
+            "Batches_Labeled": num_labeled_batches,
+            "Samples_Labeled": len(datamodule.train),
+            "Eval": val_metric
+        }
+    )
+    
+    if config.plot_results and eval_results:
+        # Assuming we plot based on one of the validation metrics
+        performance_curve = [r['Eval'][0]['val/mse'] for r in eval_results]
+        plot_results(performance_curve, config.log_dir)
+        
     log_results(config.log_dir, eval_results)
 
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser()
-    args.add_argument("--config", type=str)
+    args.add_argument("--config", type=str, required=True)
     args = args.parse_args()
     cfg = ActiveLearningConfig.from_yaml(args.config)
     try:
         main(cfg)
     except Exception as e:
-        logging.error(e)
+        logging.exception(e) # Use logging.exception to include stack trace
