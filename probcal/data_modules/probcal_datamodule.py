@@ -133,16 +133,17 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
 
         n = len(self.train)
         all_indices = list(range(n))
-        # For reproducibility, you can use a torch.Generator
         np.random.shuffle(all_indices)
 
-        labeled_indices = all_indices[:partition_size]
-        unlabeled_indices = all_indices[partition_size:]
+        # Assign the index lists to the instance so they can be updated later
+        self.train_indices = all_indices[:partition_size]
+        self.unlabeled_indices = all_indices[partition_size:]
+
 
         # Keep a reference to the original, full dataset
         self.original_train_dataset = self.train
-        self.train = torch.utils.data.Subset(self.original_train_dataset, labeled_indices)
-        self.unlabeled = torch.utils.data.Subset(self.original_train_dataset, unlabeled_indices)
+        self.train = torch.utils.data.Subset(self.original_train_dataset, self.train_indices)
+        self.unlabeled = torch.utils.data.Subset(self.original_train_dataset, self.unlabeled_indices)
         self.al_setup = True
     
     def active_learning_add_label_data(self, indices_to_label: list[int]):
