@@ -170,6 +170,7 @@ def main(config: ActiveLearningConfig) -> None:
             print(f"Batch size: {len(batch[0])}, Original indices: {len(batch[1])}")
             print(f"Shape of batch data: {batch[0].shape}")
             print(f"Shape of original indices: {batch[1].shape}")
+            print(f"Returning indices from unlabeled data: {datamodule.unlabeled.dataset._return_index}")
             break
         exit()
         selected_indices = select_samples(
