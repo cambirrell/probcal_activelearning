@@ -71,6 +71,7 @@ def select_samples(
 
         # The unlabeled_dataloader now yields (data, target, original_index).
         # We extract all the original indices from the dataloader's batches.
+        print(f"returning indices from unlabeled data {unlabeled_data.dataset.return_index}")
         all_original_indices_in_batches = [batch[2] for batch in unlabeled_data]
 
         # Get the indices of the top-k batches with the highest uncertainty
