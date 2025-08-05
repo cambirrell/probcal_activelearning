@@ -177,6 +177,7 @@ class ProbcalDataModule(L.LightningDataModule, BootstrapMixin):
             raise ValueError("The `unlabeled` attribute has not been set. Did you call `unlabeled_partion_setup` yet?")
         self._toggle_indices(self.unlabeled, True)
         print("return indexes:", self.unlabeled.dataset.return_index)
+        exit()
         return DataLoader(
             self.unlabeled,
             batch_size=self.batch_size,
