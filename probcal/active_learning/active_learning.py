@@ -165,8 +165,10 @@ def main(config: ActiveLearningConfig) -> None:
         if len(unlabeled_data) == 0:
             break
 
-        # Select the *indices* of samples to label next
-        print(datamodule.unlabeled.dataset._return_index)
+        # first return of unsampled dataloader
+        for batch in tqdm(unlabeled_data, desc="Evaluating uncertainty"):
+            print(f"Batch size: {len(batch[0])}, Original indices: {batch[2]}")
+            break
         exit()
         selected_indices = select_samples(
             unlabeled_data, 
