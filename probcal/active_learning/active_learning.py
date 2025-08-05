@@ -166,6 +166,8 @@ def main(config: ActiveLearningConfig) -> None:
             break
 
         # Select the *indices* of samples to label next
+        print(datamodule.unlabeled.dataset._return_index)
+        exit()
         selected_indices = select_samples(
             unlabeled_data, 
             training_data, 
