@@ -167,7 +167,9 @@ def main(config: ActiveLearningConfig) -> None:
 
         # first return of unsampled dataloader
         for batch in tqdm(unlabeled_data, desc="Evaluating uncertainty"):
-            print(f"Batch size: {len(batch[0])}, Original indices: {batch[2]}")
+            print(f"Batch size: {len(batch[0])}, Original indices: {len(batch[1])}")
+            print(f"Shape of batch data: {batch[0].shape}")
+            print(f"Shape of original indices: {batch[1].shape}")
             break
         exit()
         selected_indices = select_samples(
