@@ -166,6 +166,7 @@ def main(config: ActiveLearningConfig) -> None:
             break
 
         # first return of unsampled dataloader
+        print(datamodule.unlabeled.dataset._return_index)
         print("Datapoint: ",datamodule.unlabeled.dataset[0][0].shape, datamodule.unlabeled.dataset[0][1].shape)
         exit()
 
