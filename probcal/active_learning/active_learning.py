@@ -166,6 +166,8 @@ def main(config: ActiveLearningConfig) -> None:
             break
 
         # first return of unsampled dataloader
+        print("Datapoint: ",datamodule.unlabeled.dataset[0])
+
         for batch in tqdm(unlabeled_data, desc="Evaluating uncertainty"):
             print(f"Batch size: {len(batch[0])}, Original indices: {len(batch[1])}")
             print(f"Shape of batch data: {batch[0].shape}")
