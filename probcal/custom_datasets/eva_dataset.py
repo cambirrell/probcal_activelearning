@@ -33,6 +33,7 @@ class EVADataset(DatasetIndexMixin, Dataset):
             target_transform (Callable, optional): A function/transform that takes in the target and transforms it. Defaults to None.
             surface_image_path (bool, optional): Whether/not to return the image path along with the image and count in __getitem__.
         """
+        # This now correctly initializes the Mixin as well
         super().__init__()
 
         self.transform = transform
@@ -90,3 +91,4 @@ class EVADataset(DatasetIndexMixin, Dataset):
 
     def _check_for_eva_data(self) -> bool:
         return self.root_dir.exists() and self.image_dir.exists() and self.labels_csv.exists()
+
