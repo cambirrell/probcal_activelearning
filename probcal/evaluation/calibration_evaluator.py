@@ -425,7 +425,9 @@ class CalibrationEvaluator:
         x_prime = []
         y_prime = []
         loop = tqdm(sample_loader, desc="Drawing samples", leave=False)
-        for inputs, targets in loop:
+        for out in loop:
+            print("tuple elements: ", len(out))
+            exit()
             inputs: torch.Tensor
             targets: torch.Tensor
 
