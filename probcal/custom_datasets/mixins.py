@@ -25,7 +25,7 @@ class DatasetIndexMixin:
         # (e.g., EVADataset's implementation) by calling the next method
         # in Python's Method Resolution Order (MRO).
         item = super().__getitem__(index)
-
+        print(f"DatasetIndexMixin __getitem__ called: index={index}, _return_index={self._return_index}, item={item}")
         if not self._return_index:
             return item
         else:

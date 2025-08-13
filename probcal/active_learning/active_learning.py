@@ -71,11 +71,10 @@ def select_samples(
 
         # The unlabeled_dataloader now yields (data, target, original_index).
         # We extract all the original indices from the dataloader's batches.
-        print(f"returning indices from unlabeled data {unlabeled_data.dataset.dataset._return_index}")
         try:
             all_original_indices_in_batches = [batch[2] for batch in unlabeled_data]
         except IndexError:
-            raise ValueError(f"The unlabeled data loader does not return original indices. Ensure it is set up correctly. {unlabeled_data.dataset._return_index}")
+            raise ValueError(f"The unlabeled data loader does not return original indices. Ensure it is set up correctly.")
         # Get the indices of the top-k batches with the highest uncertainty
         num_to_sample = min(num_batches_to_sample, len(uncertainty_scores))
         topk_batch_indices = torch.topk(uncertainty_scores, k=num_to_sample).indices
