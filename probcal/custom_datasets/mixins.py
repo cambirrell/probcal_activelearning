@@ -20,16 +20,3 @@ class DatasetIndexMixin:
         """
         self._return_index = value
 
-    def __getitem__(self, index):
-        # This calls the __getitem__ of the class that inherits the Mixin
-        # (e.g., EVADataset's implementation) by calling the next method
-        # in Python's Method Resolution Order (MRO).
-        item = super().__getitem__(index)
-        print(f"DatasetIndexMixin __getitem__ called: index={index}, _return_index={self._return_index}, item={item}")
-        exit()
-        if not self._return_index:
-            return item
-        else:
-            # Assumes the base __getitem__ returns a tuple (e.g., (image, score))
-            # and appends the index to it.
-            return (*item, index)

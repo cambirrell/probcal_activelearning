@@ -64,10 +64,8 @@ class EVADataset(DatasetIndexMixin, Dataset):
         return pd.DataFrame(instances)
 
     def __getitem__(self, idx: int) -> tuple[PILImage, int] | tuple[PILImage, tuple[str, int]]:
-        try:
-            row = self.instances.iloc[idx]
-        except TypeError:
-            row = self.instances.iloc[idx.item()]
+        int_idx = idx.item() if hasattr(idx, "item") else idx
+        row = self.instances.iloc[int_idx]
         image_path = row["image_path"]
         image = Image.open(image_path)
         image = self._ensure_rgb(image)
@@ -77,9 +75,13 @@ class EVADataset(DatasetIndexMixin, Dataset):
         if self.target_transform is not None:
             score = self.target_transform(score)
         if self.surface_image_path:
-            return image, (image_path, score)
+            item =  image, (image_path, score)
         else:
-            return image, score
+            item = image, score
+        if self._return_index:
+            return (*item, int_idx)
+        else:
+            return item
 
     def __len__(self):
         return len(self.instances)
