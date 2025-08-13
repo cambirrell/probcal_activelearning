@@ -157,10 +157,11 @@ def main(config: ActiveLearningConfig) -> None:
                 "Eval": val_metric
             }
         )
-        
+        print("Before Train: ", datamodule.train.dataset._return_index)
         training_data = datamodule.train_dataloader()
+        print("After Train: ", datamodule.train.dataset._return_index)
         unlabeled_data = datamodule.unlabeled_dataloader()
-
+        print("After Unlabeled: ", datamodule.train.dataset._return_index)
         if len(unlabeled_data) == 0:
             break
 
