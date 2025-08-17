@@ -288,49 +288,47 @@ class CalibrationEvaluator:
             # Get reference samples (labeled)
             model.to(self.device)
             model.eval()
-            x_ref, y_ref, x_prime_ref, y_prime_ref = self._get_samples_for_mcmd(model, sample_loader)
+            x_ref, y_ref, x_prime_ref, y_prime_ref, ref_indices = self._get_samples_for_mcmd_active_learning(model, sample_loader)
             x_kernel, y_kernel = self._get_kernel_functions(y_ref)
             uncertainty_scores = []
             batch_indices = []
             print(f"Num batches: {len(unlabeled_sample_loader)}")
-            for batch_idx, (inputs, _) in enumerate(tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")):
-                # Encode inputs
-                if self.settings.dataset_type == DatasetType.TABULAR:
-                    encoder = self._encode_tabular
-                elif self.settings.dataset_type == DatasetType.IMAGE:
-                    encoder = self._encode_image
+            for batch_idx, batch in enumerate(tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")):
+                # Expect batch to be (inputs, targets, indices)
+                if len(batch) == 3:
+                    inputs, targets, indices = batch
                 else:
-                    encoder = self._encode_text
+                    inputs, targets = batch
+                    indices = None
                 inputs = inputs.to(self.device)
-                encoded_inputs = encoder(inputs)
-                # Predictive samples for this batch
+                encoded_inputs = self._encode_tabular(inputs) if self.settings.dataset_type == DatasetType.TABULAR else self._encode_image(inputs)
                 y_hat = model.predict(inputs)
-                x_prime = torch.repeat_interleave(
+                x_samples = torch.repeat_interleave(
                     encoded_inputs,
                     repeats=self.settings.cce_settings.num_mc_samples,
                     dim=0,
                 )
-                y_prime = model.sample(
+                y_samples = model.sample(
                     y_hat,
                     num_samples=self.settings.cce_settings.num_mc_samples,
                 ).flatten()
-                # Compute MCMD/CCE between reference and this batch
-                # Use the batch as the "grid" for CCE computation
+                # Compute MCMD/CCE for this batch
                 cce_val = compute_mcmd_torch(
                     grid=encoded_inputs,
                     x=x_ref,
                     y=y_ref,
-                    x_prime=x_prime,
-                    y_prime=y_prime,
+                    x_prime=x_prime_ref,
+                    y_prime=y_prime_ref,
                     x_kernel=x_kernel,
                     y_kernel=y_kernel,
                     lmbda=self.settings.cce_settings.lmbda,
                 )
-                # Aggregate CCE for this batch (mean over grid points)
                 uncertainty_scores.append(cce_val.mean().item())
-                batch_indices.append(batch_idx)
-
-            return torch.tensor(uncertainty_scores), torch.tensor(batch_indices)
+                batch_indices.append(indices if indices is not None else torch.tensor([]))
+            uncertainty_scores = torch.tensor(uncertainty_scores)
+            # batch_indices is a list of tensors; stack if possible
+            batch_indices = batch_indices if batch_indices and batch_indices[0].numel() > 0 else None
+            return uncertainty_scores, batch_indices
 
     def compute_ece(self, model: ProbabilisticRegressionNN, data_loader: DataLoader) -> float:
         """Compute the regression ECE of the given model over the dataset spanned by the data loader.
@@ -459,6 +457,48 @@ class CalibrationEvaluator:
         y_prime = torch.cat(y_prime).float()
 
         return x, y, x_prime, y_prime
+
+    def _get_samples_for_mcmd_active_learning(
+        self,
+        model: ProbabilisticRegressionNN,
+        sample_loader: DataLoader,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Like _get_samples_for_mcmd, but expects each sample to be (inputs, targets, index).
+        Returns the indices as well for tracking.
+        """
+        x = []
+        y = []
+        x_prime = []
+        y_prime = []
+        indices = []
+        loop = tqdm(sample_loader, desc="Drawing samples (active learning)", leave=False)
+        for inputs, targets, idx in loop:
+            encoded_inputs = self._encode_tabular(inputs.to(self.device)) if self.settings.dataset_type == DatasetType.TABULAR else self._encode_image(inputs.to(self.device))
+            x.append(encoded_inputs)
+            y.append(targets.to(self.device))
+            indices.append(idx)
+
+            y_hat = model.predict(inputs.to(self.device))
+            x_samples = torch.repeat_interleave(
+                encoded_inputs,
+                repeats=self.settings.cce_settings.num_mc_samples,
+                dim=0,
+            )
+            y_samples = model.sample(
+                y_hat,
+                num_samples=self.settings.cce_settings.num_mc_samples,
+            ).flatten()
+            x_prime.append(x_samples)
+            y_prime.append(y_samples)
+
+        x = torch.cat(x, dim=0)
+        y = torch.cat(y).float()
+        x_prime = torch.cat(x_prime, dim=0)
+        y_prime = torch.cat(y_prime).float()
+        indices = torch.cat(indices, dim=0)
+
+        return x, y, x_prime, y_prime, indices
 
     def _get_kernel_functions(self, y: torch.Tensor) -> tuple[KernelFunction, KernelFunction]:
         if self.settings.cce_settings.input_kernel == "polynomial":
