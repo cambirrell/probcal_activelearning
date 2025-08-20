@@ -204,6 +204,8 @@ def main(config: ActiveLearningConfig) -> None:
 
     print("\n--- All data has been labeled. Performing final training run. ---")
     model, val_metric = train_samples(model, config, datamodule)
+    print(val_metric)
+    exit()
     eval_results.append(
         {
             "Batches_Labeled": num_labeled_batches,
