@@ -149,8 +149,6 @@ def main(config: ActiveLearningConfig) -> None:
         print(f"\n--- Starting new AL round. Labeled: {len(datamodule.train)}, Unlabeled: {len(datamodule.unlabeled)} ---")
         
         model, val_metric = train_samples(model, config, datamodule)
-        print(val_metric)
-        exit()
         eval_results.append(
             {
                 "Batches_Labeled": num_labeled_batches,
@@ -215,7 +213,7 @@ def main(config: ActiveLearningConfig) -> None:
     
     if config.plot_results and eval_results:
         # Assuming we plot based on one of the validation metrics
-        performance_curve = [r['Eval'][0]['val/mse'] for r in eval_results]
+        performance_curve = [r['Eval'][0]['val_rmse'] for r in eval_results]
         plot_results(performance_curve, config.log_dir)
         
     log_results(config.log_dir, eval_results)
