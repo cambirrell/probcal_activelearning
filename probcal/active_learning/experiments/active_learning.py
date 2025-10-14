@@ -164,7 +164,7 @@ def main(config: ActiveLearningConfig) -> None:
             unlabeled_data,
             training_data,
             model,
-            config.sample_per_iteration,
+            config.samples_per_iteration,
             config.uncertainty_metric,
         )
 

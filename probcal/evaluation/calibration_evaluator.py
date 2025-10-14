@@ -228,9 +228,11 @@ class CalibrationEvaluator:
         sample_loader: DataLoader,
         return_grid: bool = False,
         return_targets: bool = False,
-    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor] | tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor
-    ]:
+    ) -> (
+        torch.Tensor
+        | tuple[torch.Tensor, torch.Tensor]
+        | tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+    ):
         """Compute the CCE between the given model and data samples.
 
         Args:
@@ -265,70 +267,78 @@ class CalibrationEvaluator:
             return return_obj[0]
         else:
             return tuple(return_obj)
-        
+
     @torch.inference_mode()
     def compute__cce_active_learning(
-            self,
-            model: ProbabilisticRegressionNN,
-            sample_loader: DataLoader,
-            unlabeled_sample_loader: DataLoader,
-        ) -> tuple[torch.Tensor, torch.Tensor]:
-            """Compute CCE-based uncertainty for each batch in the unlabeled set.
+        self,
+        model: ProbabilisticRegressionNN,
+        sample_loader: DataLoader,
+        unlabeled_sample_loader: DataLoader,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute CCE-based uncertainty for each batch in the unlabeled set.
 
-            Args:
-                model (ProbabilisticRegressionNN): Probabilistic regression model to compute the CCE for.
-                sample_loader (DataLoader): DataLoader with the data inputs/outputs that define S for x and y (labeled reference).
-                unlabeled_sample_loader (DataLoader): DataLoader with unlabeled data to score.
+        Args:
+            model (ProbabilisticRegressionNN): Probabilistic regression model to compute the CCE for.
+            sample_loader (DataLoader): DataLoader with the data inputs/outputs that define S for x and y (labeled reference).
+            unlabeled_sample_loader (DataLoader): DataLoader with unlabeled data to score.
 
-            Returns:
-                tuple[torch.Tensor, torch.Tensor]:
-                    - uncertainty_scores: (num_batches,) tensor of CCE values per batch.
-                    - batch_indices: (num_batches,) tensor of batch indices.
-            """
-            # Get reference samples (labeled)
-            model.to(self.device)
-            model.eval()
-            x_ref, y_ref, x_prime_ref, y_prime_ref, ref_indices = self._get_samples_for_mcmd_active_learning(model, sample_loader)
-            x_kernel, y_kernel = self._get_kernel_functions(y_ref)
-            uncertainty_scores = []
-            batch_indices = []
-            print(f"Num batches: {len(unlabeled_sample_loader)}")
-            for batch_idx, batch in enumerate(tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")):
-                # Expect batch to be (inputs, targets, indices)
-                if len(batch) == 3:
-                    inputs, targets, indices = batch
-                else:
-                    inputs, targets = batch
-                    indices = None
-                inputs = inputs.to(self.device)
-                encoded_inputs = self._encode_tabular(inputs) if self.settings.dataset_type == DatasetType.TABULAR else self._encode_image(inputs)
-                y_hat = model.predict(inputs)
-                x_samples = torch.repeat_interleave(
-                    encoded_inputs,
-                    repeats=self.settings.cce_settings.num_mc_samples,
-                    dim=0,
-                )
-                y_samples = model.sample(
-                    y_hat,
-                    num_samples=self.settings.cce_settings.num_mc_samples,
-                ).flatten()
-                # Compute MCMD/CCE for this batch
-                cce_val = compute_mcmd_torch(
-                    grid=encoded_inputs,
-                    x=x_ref,
-                    y=y_ref,
-                    x_prime=x_prime_ref,
-                    y_prime=y_prime_ref,
-                    x_kernel=x_kernel,
-                    y_kernel=y_kernel,
-                    lmbda=self.settings.cce_settings.lmbda,
-                )
-                uncertainty_scores.append(cce_val.mean().item())
-                batch_indices.append(indices if indices is not None else torch.tensor([]))
-            uncertainty_scores = torch.tensor(uncertainty_scores)
-            # batch_indices is a list of tensors; stack if possible
-            batch_indices = batch_indices if batch_indices and batch_indices[0].numel() > 0 else None
-            return uncertainty_scores, batch_indices
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]:
+                - uncertainty_scores: (num_batches,) tensor of CCE values per batch.
+                - batch_indices: (num_batches,) tensor of batch indices.
+        """
+        # Get reference samples (labeled)
+        model.to(self.device)
+        model.eval()
+        x_ref, y_ref, x_prime_ref, y_prime_ref, ref_indices = (
+            self._get_samples_for_mcmd_active_learning(model, sample_loader)
+        )
+        x_kernel, y_kernel = self._get_kernel_functions(y_ref)
+        uncertainty_scores = []
+        batch_indices = []
+        print(f"Num batches: {len(unlabeled_sample_loader)}")
+        for batch_idx, batch in enumerate(
+            tqdm(unlabeled_sample_loader, desc="Scoring unlabeled batches")
+        ):
+            # Expect batch to be (inputs, targets, indices)
+            if len(batch) == 3:
+                inputs, targets, indices = batch
+            else:
+                inputs, targets = batch
+                indices = None
+            inputs = inputs.to(self.device)
+            encoded_inputs = (
+                self._encode_tabular(inputs)
+                if self.settings.dataset_type == DatasetType.TABULAR
+                else self._encode_image(inputs)
+            )
+            y_hat = model.predict(inputs)
+            x_samples = torch.repeat_interleave(
+                encoded_inputs,
+                repeats=self.settings.cce_settings.num_mc_samples,
+                dim=0,
+            )
+            y_samples = model.sample(
+                y_hat,
+                num_samples=self.settings.cce_settings.num_mc_samples,
+            ).flatten()
+            # Compute MCMD/CCE for this batch
+            cce_val = compute_mcmd_torch(
+                grid=encoded_inputs,
+                x=x_ref,
+                y=y_ref,
+                x_prime=x_prime_ref,
+                y_prime=y_prime_ref,
+                x_kernel=x_kernel,
+                y_kernel=y_kernel,
+                lmbda=self.settings.cce_settings.lmbda,
+            )
+            uncertainty_scores.append(cce_val.mean().item())
+            batch_indices.append(indices if indices is not None else torch.tensor([]))
+        uncertainty_scores = torch.tensor(uncertainty_scores)
+        # batch_indices is a list of tensors; stack if possible
+        batch_indices = batch_indices if batch_indices and batch_indices[0].numel() > 0 else None
+        return uncertainty_scores, batch_indices
 
     def compute_ece(self, model: ProbabilisticRegressionNN, data_loader: DataLoader) -> float:
         """Compute the regression ECE of the given model over the dataset spanned by the data loader.
@@ -458,6 +468,87 @@ class CalibrationEvaluator:
 
         return x, y, x_prime, y_prime
 
+    @torch.no_grad()
+    def get_reference_samples_for_active_learning(
+        self,
+        model: ProbabilisticRegressionNN,
+        sample_loader: DataLoader,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Get reference samples (x, y, x_prime, y_prime) for active learning uncertainty scoring.
+
+        This is the public API for active learning acquisition functions to get reference
+        samples from the labeled training set. Unlike _get_samples_for_mcmd, this method
+        properly handles dataloaders that return (inputs, targets, indices).
+
+        Args:
+            model (ProbabilisticRegressionNN): Model to draw samples from.
+            sample_loader (DataLoader): DataLoader for labeled reference data.
+                Must return (inputs, targets, indices) or (inputs, targets).
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+                - x: Encoded inputs from labeled data
+                - y: True targets from labeled data
+                - x_prime: Encoded inputs repeated for MC samples
+                - y_prime: Model-sampled outputs
+        """
+        x = []
+        y = []
+        x_prime = []
+        y_prime = []
+
+        # Determine encoder based on dataset type
+        if self.settings.dataset_type == DatasetType.TABULAR:
+            encoder = self._encode_tabular
+        elif self.settings.dataset_type == DatasetType.IMAGE:
+            encoder = self._encode_image
+        else:
+            encoder = self._encode_text
+
+        loop = tqdm(sample_loader, desc="Drawing reference samples", leave=False)
+        for batch in loop:
+            # Handle both (inputs, targets) and (inputs, targets, indices) formats
+            if len(batch) == 3:
+                inputs, targets, _ = batch  # Ignore indices for reference samples
+            elif len(batch) == 2:
+                inputs, targets = batch
+            else:
+                raise ValueError(
+                    f"Expected batch to have 2 or 3 elements, got {len(batch)}. "
+                    f"Dataloader should return (inputs, targets) or (inputs, targets, indices)."
+                )
+
+            inputs = inputs.to(self.device)
+            targets = targets.to(self.device)
+
+            # Encode inputs
+            encoded_inputs = encoder(inputs)
+            x.append(encoded_inputs)
+            y.append(targets)
+
+            # Generate model samples
+            y_hat = model.predict(inputs)
+            x_samples = torch.repeat_interleave(
+                encoded_inputs,
+                repeats=self.settings.cce_settings.num_mc_samples,
+                dim=0,
+            )
+            y_samples = model.sample(
+                y_hat,
+                num_samples=self.settings.cce_settings.num_mc_samples,
+            ).flatten()
+
+            x_prime.append(x_samples)
+            y_prime.append(y_samples)
+
+        # Concatenate all batches
+        x = torch.cat(x, dim=0)
+        y = torch.cat(y).float()
+        x_prime = torch.cat(x_prime, dim=0)
+        y_prime = torch.cat(y_prime).float()
+
+        return x, y, x_prime, y_prime
+
     def _get_samples_for_mcmd_active_learning(
         self,
         model: ProbabilisticRegressionNN,
@@ -474,7 +565,11 @@ class CalibrationEvaluator:
         indices = []
         loop = tqdm(sample_loader, desc="Drawing samples (active learning)", leave=False)
         for inputs, targets, idx in loop:
-            encoded_inputs = self._encode_tabular(inputs.to(self.device)) if self.settings.dataset_type == DatasetType.TABULAR else self._encode_image(inputs.to(self.device))
+            encoded_inputs = (
+                self._encode_tabular(inputs.to(self.device))
+                if self.settings.dataset_type == DatasetType.TABULAR
+                else self._encode_image(inputs.to(self.device))
+            )
             x.append(encoded_inputs)
             y.append(targets.to(self.device))
             indices.append(idx)

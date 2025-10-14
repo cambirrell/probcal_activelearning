@@ -373,16 +373,15 @@ class ActiveLearningConfig(TrainingConfig):
         num_trials: int,
         log_dir: Path,
         source_dict: dict,
-        sample_per_iteration: int, # Number of batches added per iteration
-        initial_labeled_partiton: int, #batches in initial
-        uncertainty_metric: str, # Lets get this to its own object instead of a str, but I want results
+        samples_per_iteration: int,  # Number of batches added per iteration
+        initial_labeled_partiton: int,  # batches in initial
+        uncertainty_metric: str,  # Lets get this to its own object instead of a str, but I want results
+        budget: int | None = None,  # Total number of batches to label
         plot_results: bool = False,
         input_dim: int = 1,
         hidden_dim: int = 64,
         precision: str | None = None,
         random_seed: int | None = None,
-
-
     ):
         super(ActiveLearningConfig, self).__init__(
             experiment_name=experiment_name,
@@ -407,14 +406,14 @@ class ActiveLearningConfig(TrainingConfig):
             input_dim=input_dim,
             hidden_dim=hidden_dim,
             precision=precision,
-            random_seed=random_seed
+            random_seed=random_seed,
         )
 
-        self.sample_per_iteration = sample_per_iteration
+        self.samples_per_iteration = samples_per_iteration
         self.initial_labeled_partition = initial_labeled_partiton
         self.plot_results = plot_results
         self.uncertainty_metric = uncertainty_metric
-
+        self.budget = budget
 
     @staticmethod
     def from_yaml(config_path: str | Path) -> ActiveLearningConfig:
@@ -468,11 +467,11 @@ class ActiveLearningConfig(TrainingConfig):
         hidden_dim = config_dict.get("hidden_dim", 64)
         random_seed = config_dict.get("random_seed")
 
-        sample_per_iteration = active_learning_dict["samples_per_iteration"]
+        samples_per_iteration = active_learning_dict["samples_per_iteration"]
         initial_labeled_partition = active_learning_dict["initial_labeled_partition"]
         uncertainty_metric = active_learning_dict["uncertainty_metric"]
         plot_results = active_learning_dict.get("plot_results", False)
-
+        budget = active_learning_dict.get("budget", None)
         return ActiveLearningConfig(
             experiment_name=experiment_name,
             accelerator_type=accelerator_type,
@@ -493,7 +492,7 @@ class ActiveLearningConfig(TrainingConfig):
             num_trials=num_trials,
             log_dir=log_dir,
             source_dict=config_dict,
-            sample_per_iteration=sample_per_iteration,
+            samples_per_iteration=samples_per_iteration,
             initial_labeled_partiton=initial_labeled_partition,
             uncertainty_metric=uncertainty_metric,
             plot_results=plot_results,
@@ -501,5 +500,5 @@ class ActiveLearningConfig(TrainingConfig):
             hidden_dim=hidden_dim,
             precision=precision,
             random_seed=random_seed,
+            budget=budget,
         )
-    
